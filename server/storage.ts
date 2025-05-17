@@ -4,6 +4,8 @@ import {
   battles, type Battle, type InsertBattle,
   battleFighterStats, type BattleFighterStat, type InsertBattleFighterStat
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Warband operations
@@ -33,133 +35,105 @@ export interface IStorage {
   createBattleFighterStat(stat: InsertBattleFighterStat): Promise<BattleFighterStat>;
 }
 
-export class MemStorage implements IStorage {
-  private warbands: Map<number, Warband>;
-  private fighters: Map<number, Fighter>;
-  private battles: Map<number, Battle>;
-  private battleFighterStats: Map<number, BattleFighterStat>;
-  
-  private warbandId: number;
-  private fighterId: number;
-  private battleId: number;
-  private battleFighterStatId: number;
-  
-  constructor() {
-    this.warbands = new Map();
-    this.fighters = new Map();
-    this.battles = new Map();
-    this.battleFighterStats = new Map();
-    
-    this.warbandId = 1;
-    this.fighterId = 1;
-    this.battleId = 1;
-    this.battleFighterStatId = 1;
-  }
-  
+export class DatabaseStorage implements IStorage {
   // Warband operations
   async getWarbands(): Promise<Warband[]> {
-    return Array.from(this.warbands.values());
+    return await db.select().from(warbands);
   }
   
   async getWarband(id: number): Promise<Warband | undefined> {
-    return this.warbands.get(id);
+    const results = await db.select().from(warbands).where(eq(warbands.id, id));
+    return results.length > 0 ? results[0] : undefined;
   }
   
   async createWarband(warband: InsertWarband): Promise<Warband> {
-    const id = this.warbandId++;
     const now = new Date();
-    const newWarband: Warband = { ...warband, id, createdAt: now };
-    this.warbands.set(id, newWarband);
-    return newWarband;
+    const result = await db.insert(warbands).values({...warband, createdAt: now}).returning();
+    return result[0];
   }
   
   async updateWarband(id: number, warband: Partial<InsertWarband>): Promise<Warband | undefined> {
-    const existingWarband = this.warbands.get(id);
-    if (!existingWarband) return undefined;
-    
-    const updatedWarband: Warband = { ...existingWarband, ...warband };
-    this.warbands.set(id, updatedWarband);
-    return updatedWarband;
+    const result = await db.update(warbands)
+      .set(warband)
+      .where(eq(warbands.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async deleteWarband(id: number): Promise<boolean> {
-    return this.warbands.delete(id);
+    const result = await db.delete(warbands).where(eq(warbands.id, id)).returning();
+    return result.length > 0;
   }
   
   // Fighter operations
   async getFighters(): Promise<Fighter[]> {
-    return Array.from(this.fighters.values());
+    return await db.select().from(fighters);
   }
   
   async getFighter(id: number): Promise<Fighter | undefined> {
-    return this.fighters.get(id);
+    const results = await db.select().from(fighters).where(eq(fighters.id, id));
+    return results.length > 0 ? results[0] : undefined;
   }
   
   async getFightersByWarband(warbandId: number): Promise<Fighter[]> {
-    return Array.from(this.fighters.values()).filter(fighter => fighter.warbandId === warbandId);
+    return await db.select().from(fighters).where(eq(fighters.warbandId, warbandId));
   }
   
   async createFighter(fighter: InsertFighter): Promise<Fighter> {
-    const id = this.fighterId++;
-    const newFighter: Fighter = { ...fighter, id };
-    this.fighters.set(id, newFighter);
-    return newFighter;
+    const result = await db.insert(fighters).values(fighter).returning();
+    return result[0];
   }
   
   async updateFighter(id: number, fighter: Partial<InsertFighter>): Promise<Fighter | undefined> {
-    const existingFighter = this.fighters.get(id);
-    if (!existingFighter) return undefined;
-    
-    const updatedFighter: Fighter = { ...existingFighter, ...fighter };
-    this.fighters.set(id, updatedFighter);
-    return updatedFighter;
+    const result = await db.update(fighters)
+      .set(fighter)
+      .where(eq(fighters.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async deleteFighter(id: number): Promise<boolean> {
-    return this.fighters.delete(id);
+    const result = await db.delete(fighters).where(eq(fighters.id, id)).returning();
+    return result.length > 0;
   }
   
   // Battle operations
   async getBattles(): Promise<Battle[]> {
-    return Array.from(this.battles.values());
+    return await db.select().from(battles);
   }
   
   async getBattle(id: number): Promise<Battle | undefined> {
-    return this.battles.get(id);
+    const results = await db.select().from(battles).where(eq(battles.id, id));
+    return results.length > 0 ? results[0] : undefined;
   }
   
   async createBattle(battle: InsertBattle): Promise<Battle> {
-    const id = this.battleId++;
-    const newBattle: Battle = { ...battle, id };
-    this.battles.set(id, newBattle);
-    return newBattle;
+    const result = await db.insert(battles).values(battle).returning();
+    return result[0];
   }
   
   async updateBattle(id: number, battle: Partial<InsertBattle>): Promise<Battle | undefined> {
-    const existingBattle = this.battles.get(id);
-    if (!existingBattle) return undefined;
-    
-    const updatedBattle: Battle = { ...existingBattle, ...battle };
-    this.battles.set(id, updatedBattle);
-    return updatedBattle;
+    const result = await db.update(battles)
+      .set(battle)
+      .where(eq(battles.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async deleteBattle(id: number): Promise<boolean> {
-    return this.battles.delete(id);
+    const result = await db.delete(battles).where(eq(battles.id, id)).returning();
+    return result.length > 0;
   }
   
   // Battle Fighter Stats operations
   async getBattleFighterStats(battleId: number): Promise<BattleFighterStat[]> {
-    return Array.from(this.battleFighterStats.values())
-      .filter(stat => stat.battleId === battleId);
+    return await db.select().from(battleFighterStats).where(eq(battleFighterStats.battleId, battleId));
   }
   
   async createBattleFighterStat(stat: InsertBattleFighterStat): Promise<BattleFighterStat> {
-    const id = this.battleFighterStatId++;
-    const newStat: BattleFighterStat = { ...stat, id };
-    this.battleFighterStats.set(id, newStat);
-    return newStat;
+    const result = await db.insert(battleFighterStats).values(stat).returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
