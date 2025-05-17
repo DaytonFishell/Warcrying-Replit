@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 240 10% 12%;
+  --foreground: 0 0% 88%;
+  --muted: 240 6% 20%;
+  --muted-foreground: 0 0% 64%;
+  --popover: 240 10% 12%;
+  --popover-foreground: 0 0% 88%;
+  --card: 240 10% 19%;
+  --card-foreground: 0 0% 88%;
+  --border: 240 10% 18%;
+  --input: 240 10% 20%;
+  --primary: 262 51% 55%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 36 100% 50%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 36 100% 50%;
+  --accent-foreground: 240 10% 12%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --success: 120 39% 49%;
+  --success-foreground: 0 0% 98%;
+  --warning: 36 100% 50%;
+  --warning-foreground: 240 10% 12%;
+  --ring: 262 51% 55%;
+  --radius: 0.5rem;
+  --sidebar-background: 240, 10%, 10%;
+  --sidebar-foreground: 0 0% 88%;
+  --sidebar-primary: 262 51% 55%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 36 100% 50%;
+  --sidebar-accent-foreground: 240 10% 12%;
+  --sidebar-border: 240 10% 15%;
+  --sidebar-ring: 262 51% 55%;
+  --chart-1: 262 51% 55%;
+  --chart-2: 36 100% 50%;
+  --chart-3: 120 39% 49%;
+  --chart-4: 0 84.2% 60.2%;
+  --chart-5: 210 79% 65%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-cinzel;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-card rounded-lg shadow-lg transition-transform hover:translate-y-[-4px];
+  }
+  
+  .card-header {
+    @apply bg-gradient-to-r from-primary to-card rounded-t-lg;
+  }
+  
+  .stat-bar {
+    @apply h-2 bg-background/20 rounded overflow-hidden;
+  }
+  
+  .stat-fill {
+    @apply h-full rounded;
+  }
+  
+  .battle-card {
+    @apply bg-gradient-to-b from-card to-background;
+  }
+  
+  .glow-border {
+    @apply shadow-[0_0_8px_rgba(126,87,194,0.6)];
+  }
+  
+  .tab-active {
+    @apply border-b-2 border-primary text-primary;
+  }
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-body {
+  font-family: 'Inter', sans-serif;
+}
