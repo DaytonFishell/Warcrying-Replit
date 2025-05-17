@@ -42,6 +42,12 @@ export default function Dashboard() {
     },
     { 
       id: 4, 
+      title: "Temp Warband", 
+      icon: "zap", 
+      link: "/temp-warband" 
+    },
+    { 
+      id: 5, 
       title: "Quick Rules", 
       icon: "scroll", 
       link: "/rules" 

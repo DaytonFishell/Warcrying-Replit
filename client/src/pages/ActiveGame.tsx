@@ -63,15 +63,56 @@ export default function ActiveGame() {
   // Selected warbands for the game
   const [selectedWarbandIds, setSelectedWarbandIds] = useState<number[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
+  const [usingTempWarband, setUsingTempWarband] = useState(false);
+
+  // Check if using a temporary warband (from URL parameter)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('temp') === 'true') {
+      const tempWarband = JSON.parse(sessionStorage.getItem('temp_warband') || 'null');
+      const tempFighters = JSON.parse(sessionStorage.getItem('temp_fighters') || '[]');
+      
+      if (tempWarband) {
+        setUsingTempWarband(true);
+        setSelectedWarbandIds([tempWarband.id]);
+        
+        // Auto-start game with temp warband
+        const activeWarbands: ActiveWarband[] = [{
+          warband: tempWarband,
+          fighters: tempFighters.map((fighter: Fighter) => ({
+            ...fighter,
+            currentWounds: fighter.wounds,
+            usedAbilities: [],
+            activationUsed: false,
+          })),
+          dicePool: {
+            single: [],
+            double: [],
+            triple: [],
+            quad: []
+          }
+        }];
+        
+        setActiveGame({
+          battleRound: 1,
+          warbandTurn: 0,
+          activeWarbands,
+        });
+        setGameStarted(true);
+      }
+    }
+  }, []);
 
   // Fetch warbands
   const { data: warbands, isLoading: isLoadingWarbands } = useQuery<Warband[]>({
     queryKey: ['/api/warbands'],
+    enabled: !usingTempWarband, // Don't fetch if using temp warband
   });
 
   // Fetch fighters for the selected warbands
   const { data: allFighters, isLoading: isLoadingFighters } = useQuery<Fighter[]>({
     queryKey: ['/api/fighters'],
+    enabled: !usingTempWarband, // Don't fetch if using temp warband
   });
 
   // Initialize the game
