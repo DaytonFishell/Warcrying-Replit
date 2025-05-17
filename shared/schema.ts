@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, json, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, json, timestamp, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Warbands table
 export const warbands = pgTable("warbands", {
@@ -16,7 +17,7 @@ export const warbands = pgTable("warbands", {
 // Fighters table
 export const fighters = pgTable("fighters", {
   id: serial("id").primaryKey(),
-  warbandId: integer("warband_id").notNull(),
+  warbandId: integer("warband_id").notNull().references(() => warbands.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   type: text("type").notNull(),
   pointsCost: integer("points_cost").notNull(),
@@ -42,8 +43,8 @@ export const battles = pgTable("battles", {
   scenario: text("scenario").notNull(),
   date: timestamp("date").notNull().defaultNow(),
   mapType: text("map_type"),
-  winnerId: integer("winner_id").notNull(),
-  loserId: integer("loser_id").notNull(),
+  winnerId: integer("winner_id").notNull().references(() => warbands.id),
+  loserId: integer("loser_id").notNull().references(() => warbands.id),
   winnerScore: integer("winner_score").notNull().default(0),
   loserScore: integer("loser_score").notNull().default(0),
   notes: text("notes"),
