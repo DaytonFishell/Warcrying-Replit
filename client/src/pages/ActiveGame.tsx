@@ -9,13 +9,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Warband, Fighter } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, XCircle, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6 } from "lucide-react";
+import { CheckCircle, XCircle, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Crown, Zap, Heart, Shield, Sword, RotateCcw, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
-// Track ability usage, remaining wounds, and dice
+// Enhanced fighter tracking with treasure and status effects
 type ActiveFighter = Fighter & {
   currentWounds: number;
   usedAbilities: string[];
   activationUsed: boolean;
+  hasTreasure: boolean;
+  statusEffects: string[];
+  abilityDice: {
+    [abilityName: string]: {
+      used: boolean;
+      diceValue?: number;
+    };
+  };
 };
 
 type ActiveWarband = {
@@ -27,6 +37,7 @@ type ActiveWarband = {
     triple: number[];
     quad: number[];
   };
+  totalTreasures: number;
 };
 
 const DiceIcon = ({ value }: { value: number }) => {
@@ -84,13 +95,17 @@ export default function ActiveGame() {
             currentWounds: fighter.wounds,
             usedAbilities: [],
             activationUsed: false,
+            hasTreasure: false,
+            statusEffects: [],
+            abilityDice: {},
           })),
           dicePool: {
             single: [],
             double: [],
             triple: [],
             quad: []
-          }
+          },
+          totalTreasures: 0
         }];
         
         setActiveGame({
@@ -127,6 +142,9 @@ export default function ActiveGame() {
         currentWounds: fighter.wounds,
         usedAbilities: [],
         activationUsed: false,
+        hasTreasure: false,
+        statusEffects: [],
+        abilityDice: {},
       }));
 
       return {
@@ -137,7 +155,8 @@ export default function ActiveGame() {
           double: [],
           triple: [],
           quad: []
-        }
+        },
+        totalTreasures: 0
       };
     });
 
@@ -243,12 +262,13 @@ export default function ActiveGame() {
     if (nextWarbandTurn === 0) {
       nextBattleRound += 1;
       
-      // Reset all fighter activations for the new round
+      // Reset all fighter activations and ability dice for the new round
       const resetWarbands = activeGame.activeWarbands.map(warband => ({
         ...warband,
         fighters: warband.fighters.map(fighter => ({
           ...fighter,
           activationUsed: false,
+          abilityDice: {}, // Clear ability dice for new round
         })),
       }));
       
@@ -266,10 +286,81 @@ export default function ActiveGame() {
     }
   };
 
+  // Toggle treasure for a fighter
+  const toggleTreasure = (warbandIndex: number, fighterIndex: number) => {
+    const updatedWarbands = [...activeGame.activeWarbands];
+    const fighter = updatedWarbands[warbandIndex].fighters[fighterIndex];
+    
+    fighter.hasTreasure = !fighter.hasTreasure;
+    
+    // Update warband treasure count
+    if (fighter.hasTreasure) {
+      updatedWarbands[warbandIndex].totalTreasures += 1;
+    } else {
+      updatedWarbands[warbandIndex].totalTreasures -= 1;
+    }
+    
+    setActiveGame({
+      ...activeGame,
+      activeWarbands: updatedWarbands,
+    });
+  };
+
+  // Add/remove status effect
+  const toggleStatusEffect = (warbandIndex: number, fighterIndex: number, effect: string) => {
+    const updatedWarbands = [...activeGame.activeWarbands];
+    const fighter = updatedWarbands[warbandIndex].fighters[fighterIndex];
+    
+    if (fighter.statusEffects.includes(effect)) {
+      fighter.statusEffects = fighter.statusEffects.filter(e => e !== effect);
+    } else {
+      fighter.statusEffects.push(effect);
+    }
+    
+    setActiveGame({
+      ...activeGame,
+      activeWarbands: updatedWarbands,
+    });
+  };
+
+  // Track ability dice usage
+  const setAbilityDice = (warbandIndex: number, fighterIndex: number, ability: string, diceValue: number) => {
+    const updatedWarbands = [...activeGame.activeWarbands];
+    const fighter = updatedWarbands[warbandIndex].fighters[fighterIndex];
+    
+    fighter.abilityDice[ability] = {
+      used: true,
+      diceValue: diceValue,
+    };
+    
+    setActiveGame({
+      ...activeGame,
+      activeWarbands: updatedWarbands,
+    });
+  };
+
+  // Clear ability dice for new round
+  const clearAbilityDice = (warbandIndex: number, fighterIndex: number) => {
+    const updatedWarbands = [...activeGame.activeWarbands];
+    const fighter = updatedWarbands[warbandIndex].fighters[fighterIndex];
+    
+    fighter.abilityDice = {};
+    
+    setActiveGame({
+      ...activeGame,
+      activeWarbands: updatedWarbands,
+    });
+  };
+
   // Reset the game
   const resetGame = () => {
     setGameStarted(false);
     setSelectedWarbandIds([]);
+    setUsingTempWarband(false);
+    
+    // Clear temporary warband data
+    sessionStorage.removeItem('temp_warband');
+    sessionStorage.removeItem('temp_fighters');
   };
 
   if (!gameStarted) {
@@ -389,6 +480,7 @@ export default function ActiveGame() {
         <TabsList className="mb-4">
           <TabsTrigger value="warband">Warband View</TabsTrigger>
           <TabsTrigger value="dice">Dice Pool</TabsTrigger>
+          <TabsTrigger value="battle-tools">Battle Tools</TabsTrigger>
         </TabsList>
         
         <TabsContent value="warband">
@@ -408,10 +500,27 @@ export default function ActiveGame() {
                 </CardHeader>
                 
                 <CardContent>
+                  {/* Warband Status */}
+                  <div className="flex justify-between items-center mb-4 p-2 bg-muted/50 rounded-md">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <Crown className="h-4 w-4 text-yellow-500" />
+                        <span className="text-sm font-medium">Treasures: {activeWarband.totalTreasures}</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     {activeWarband.fighters.map((fighter, fighterIndex) => (
-                      <div key={fighter.id} className="border p-3 rounded-md relative">
-                        <div className="absolute top-2 right-2">
+                      <div key={fighter.id} className="border p-4 rounded-md relative">
+                        {/* Activation Status */}
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          {fighter.hasTreasure && (
+                            <Badge variant="secondary" className="h-6 px-2">
+                              <Crown className="h-3 w-3 mr-1" />
+                              Treasure
+                            </Badge>
+                          )}
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -422,56 +531,176 @@ export default function ActiveGame() {
                           </Button>
                         </div>
                         
-                        <h3 className="font-bold">{fighter.name}</h3>
-                        <p className="text-sm text-muted-foreground">{fighter.type}</p>
+                        {/* Fighter Info */}
+                        <div className="mb-3">
+                          <h3 className="font-bold text-lg">{fighter.name}</h3>
+                          <p className="text-sm text-muted-foreground">{fighter.type}</p>
+                        </div>
+
+                        {/* Status Effects */}
+                        {fighter.statusEffects.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex flex-wrap gap-1">
+                              {fighter.statusEffects.map((effect, effectIndex) => (
+                                <Badge 
+                                  key={effectIndex} 
+                                  variant="outline" 
+                                  className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                  onClick={() => toggleStatusEffect(warbandIndex, fighterIndex, effect)}
+                                >
+                                  {effect} ×
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         
-                        <div className="mt-2 space-y-2">
-                          <div>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span>Wounds: {fighter.currentWounds}/{fighter.wounds}</span>
-                              <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => applyDamage(warbandIndex, fighterIndex, 1)}
-                                  className="h-7 px-2 text-xs"
-                                >
-                                  -1
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => healFighter(warbandIndex, fighterIndex, 1)}
-                                  className="h-7 px-2 text-xs"
-                                >
-                                  +1
-                                </Button>
-                              </div>
-                            </div>
-                            <Progress 
-                              value={(fighter.currentWounds / fighter.wounds) * 100} 
-                              className="h-2"
-                            />
-                          </div>
-                          
-                          <div className="grid grid-cols-4 gap-1 text-xs text-center">
-                            <div>
-                              <span className="block text-muted-foreground">M</span>
-                              <span>{fighter.move}"</span>
-                            </div>
-                            <div>
-                              <span className="block text-muted-foreground">S</span>
-                              <span>{fighter.strength}</span>
-                            </div>
-                            <div>
-                              <span className="block text-muted-foreground">T</span>
-                              <span>{fighter.toughness}</span>
-                            </div>
-                            <div>
-                              <span className="block text-muted-foreground">A</span>
-                              <span>{fighter.attacks}</span>
+                        {/* Health Management */}
+                        <div className="mb-3">
+                          <div className="flex justify-between items-center text-sm mb-2">
+                            <span className="flex items-center gap-1">
+                              <Heart className="h-4 w-4 text-red-500" />
+                              Wounds: {fighter.currentWounds}/{fighter.wounds}
+                            </span>
+                            <div className="flex space-x-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => applyDamage(warbandIndex, fighterIndex, 5)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                -5
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => applyDamage(warbandIndex, fighterIndex, 1)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                -1
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => healFighter(warbandIndex, fighterIndex, 1)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                +1
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => healFighter(warbandIndex, fighterIndex, 5)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                +5
+                              </Button>
                             </div>
                           </div>
+                          <Progress 
+                            value={(fighter.currentWounds / fighter.wounds) * 100} 
+                            className="h-3"
+                          />
+                        </div>
+
+                        {/* Fighter Stats */}
+                        <div className="grid grid-cols-6 gap-2 text-xs text-center mb-3">
+                          <div className="bg-muted/50 p-2 rounded">
+                            <span className="block text-muted-foreground">Move</span>
+                            <span className="font-medium">{fighter.move}"</span>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded">
+                            <span className="block text-muted-foreground">Str</span>
+                            <span className="font-medium">{fighter.strength}</span>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded">
+                            <span className="block text-muted-foreground">Tough</span>
+                            <span className="font-medium">{fighter.toughness}</span>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded">
+                            <span className="block text-muted-foreground">Atks</span>
+                            <span className="font-medium">{fighter.attacks}</span>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded">
+                            <span className="block text-muted-foreground">Dam</span>
+                            <span className="font-medium">{fighter.damage}</span>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded">
+                            <span className="block text-muted-foreground">Crit</span>
+                            <span className="font-medium">{fighter.criticalDamage}</span>
+                          </div>
+                        </div>
+
+                        {/* Abilities & Dice Tracking */}
+                        {Array.isArray(fighter.abilities) && fighter.abilities.length > 0 && (
+                          <div className="mb-3">
+                            <Label className="text-xs text-muted-foreground mb-1 block">Abilities</Label>
+                            <div className="grid grid-cols-2 gap-1">
+                              {fighter.abilities.map((ability: string, abilityIndex: number) => (
+                                <div key={abilityIndex} className="flex items-center justify-between bg-muted/50 p-2 rounded text-xs">
+                                  <span className="truncate">{ability}</span>
+                                  <div className="flex items-center gap-1">
+                                    {fighter.abilityDice[ability] ? (
+                                      <Badge variant="secondary" className="h-5 px-1 text-xs">
+                                        <DiceIcon value={fighter.abilityDice[ability].diceValue || 1} />
+                                      </Badge>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0"
+                                        onClick={() => {
+                                          const diceValue = Math.floor(Math.random() * 6) + 1;
+                                          setAbilityDice(warbandIndex, fighterIndex, ability, diceValue);
+                                        }}
+                                      >
+                                        <Zap className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Quick Actions */}
+                        <div className="flex flex-wrap gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleTreasure(warbandIndex, fighterIndex)}
+                            className={`h-7 text-xs ${fighter.hasTreasure ? 'bg-yellow-100 border-yellow-300' : ''}`}
+                          >
+                            <Crown className="h-3 w-3 mr-1" />
+                            Treasure
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleStatusEffect(warbandIndex, fighterIndex, 'Stunned')}
+                            className={`h-7 text-xs ${fighter.statusEffects.includes('Stunned') ? 'bg-red-100 border-red-300' : ''}`}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Stunned
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleStatusEffect(warbandIndex, fighterIndex, 'Flying')}
+                            className={`h-7 text-xs ${fighter.statusEffects.includes('Flying') ? 'bg-blue-100 border-blue-300' : ''}`}
+                          >
+                            <Zap className="h-3 w-3 mr-1" />
+                            Flying
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => clearAbilityDice(warbandIndex, fighterIndex)}
+                            className="h-7 text-xs"
+                          >
+                            Clear Dice
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -585,6 +814,172 @@ export default function ActiveGame() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="battle-tools">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Battle Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Battle Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-muted/50 rounded-md">
+                      <div className="text-2xl font-bold">{activeGame.battleRound}</div>
+                      <div className="text-sm text-muted-foreground">Current Round</div>
+                    </div>
+                    <div className="text-center p-3 bg-muted/50 rounded-md">
+                      <div className="text-2xl font-bold">
+                        {activeGame.activeWarbands.reduce((total, warband) => total + warband.totalTreasures, 0)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Treasures</div>
+                    </div>
+                  </div>
+
+                  {/* Warband Status Overview */}
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Warband Status</h4>
+                    {activeGame.activeWarbands.map((warband, index) => {
+                      const activeFighters = warband.fighters.filter(f => f.currentWounds > 0);
+                      const totalFighters = warband.fighters.length;
+                      const treasureHolders = warband.fighters.filter(f => f.hasTreasure);
+                      
+                      return (
+                        <div key={warband.warband.id} className="flex justify-between items-center p-2 bg-muted/30 rounded">
+                          <div>
+                            <span className="font-medium">{warband.warband.name}</span>
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              activeGame.warbandTurn === index ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            }`}>
+                              {activeGame.warbandTurn === index ? 'Active' : 'Waiting'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-right">
+                            <div>{activeFighters.length}/{totalFighters} fighters active</div>
+                            <div className="text-yellow-600">{treasureHolders.length} with treasure</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Round Management */}
+                  <div>
+                    <h4 className="font-medium mb-2">Round Management</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          // Reset all activations
+                          const resetWarbands = activeGame.activeWarbands.map(warband => ({
+                            ...warband,
+                            fighters: warband.fighters.map(fighter => ({
+                              ...fighter,
+                              activationUsed: false,
+                              abilityDice: {},
+                            })),
+                          }));
+                          
+                          setActiveGame({
+                            ...activeGame,
+                            activeWarbands: resetWarbands,
+                            warbandTurn: 0,
+                          });
+                        }}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset Round
+                      </Button>
+                      <Button variant="outline" onClick={endTurn}>
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        End Turn
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Status Effects Management */}
+                  <div>
+                    <h4 className="font-medium mb-2">Common Status Effects</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['Stunned', 'Flying', 'Inspired', 'Downed'].map(effect => (
+                        <div key={effect} className="text-center">
+                          <div className="text-sm font-medium">{effect}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {activeGame.activeWarbands.reduce((count, warband) => 
+                              count + warband.fighters.filter(f => f.statusEffects.includes(effect)).length, 0
+                            )} affected
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mass Actions */}
+                  <div>
+                    <h4 className="font-medium mb-2">Mass Actions</h4>
+                    <div className="space-y-2">
+                      <Button 
+                        variant="destructive" 
+                        className="w-full"
+                        onClick={() => {
+                          // Clear all status effects
+                          const clearedWarbands = activeGame.activeWarbands.map(warband => ({
+                            ...warband,
+                            fighters: warband.fighters.map(fighter => ({
+                              ...fighter,
+                              statusEffects: [],
+                            })),
+                          }));
+                          
+                          setActiveGame({
+                            ...activeGame,
+                            activeWarbands: clearedWarbands,
+                          });
+                        }}
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Clear All Status Effects
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => {
+                          // Clear all ability dice
+                          const clearedWarbands = activeGame.activeWarbands.map(warband => ({
+                            ...warband,
+                            fighters: warband.fighters.map(fighter => ({
+                              ...fighter,
+                              abilityDice: {},
+                            })),
+                          }));
+                          
+                          setActiveGame({
+                            ...activeGame,
+                            activeWarbands: clearedWarbands,
+                          });
+                        }}
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Clear All Ability Dice
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
