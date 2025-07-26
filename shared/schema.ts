@@ -53,8 +53,8 @@ export const battles = pgTable("battles", {
 // Battle Fighter Stats for tracking individual fighter performance
 export const battleFighterStats = pgTable("battle_fighter_stats", {
   id: serial("id").primaryKey(),
-  battleId: integer("battle_id").notNull(),
-  fighterId: integer("fighter_id").notNull(),
+  battleId: integer("battle_id").notNull().references(() => battles.id, { onDelete: 'cascade' }),
+  fighterId: integer("fighter_id").notNull().references(() => fighters.id, { onDelete: 'cascade' }),
   kills: integer("kills").notNull().default(0),
   wasKilled: boolean("was_killed").notNull().default(false),
   notes: text("notes"),
@@ -77,6 +77,46 @@ export const insertBattleSchema = createInsertSchema(battles).omit({
 export const insertBattleFighterStatsSchema = createInsertSchema(battleFighterStats).omit({
   id: true,
 });
+
+// Relations
+export const warbandsRelations = relations(warbands, ({ many }) => ({
+  fighters: many(fighters),
+  battleWins: many(battles, { relationName: "winnerWarband" }),
+  battleLosses: many(battles, { relationName: "loserWarband" }),
+}));
+
+export const fightersRelations = relations(fighters, ({ one, many }) => ({
+  warband: one(warbands, {
+    fields: [fighters.warbandId],
+    references: [warbands.id],
+  }),
+  battleStats: many(battleFighterStats),
+}));
+
+export const battlesRelations = relations(battles, ({ one, many }) => ({
+  winner: one(warbands, {
+    fields: [battles.winnerId],
+    references: [warbands.id],
+    relationName: "winnerWarband",
+  }),
+  loser: one(warbands, {
+    fields: [battles.loserId],
+    references: [warbands.id],
+    relationName: "loserWarband",
+  }),
+  fighterStats: many(battleFighterStats),
+}));
+
+export const battleFighterStatsRelations = relations(battleFighterStats, ({ one }) => ({
+  battle: one(battles, {
+    fields: [battleFighterStats.battleId],
+    references: [battles.id],
+  }),
+  fighter: one(fighters, {
+    fields: [battleFighterStats.fighterId],
+    references: [fighters.id],
+  }),
+}));
 
 // Types
 export type Warband = typeof warbands.$inferSelect;
