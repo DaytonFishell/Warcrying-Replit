@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,27 +11,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { X, Plus, Trash } from "lucide-react";
-
-// Schema for temporary fighter
-const tempFighterSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
-  move: z.coerce.number().min(1).max(10),
-  toughness: z.coerce.number().min(1).max(10),
-  wounds: z.coerce.number().min(1),
-  strength: z.coerce.number().min(1).max(10),
-  attacks: z.coerce.number().min(1).max(10),
-  damage: z.string().min(1, "Damage is required"),
-  criticalDamage: z.string().min(1, "Critical damage is required"),
-  range: z.coerce.number().min(1),
-});
+import { Plus, Trash, Play, Users, Sword } from "lucide-react";
 
 // Schema for temporary warband
 const tempWarbandSchema = z.object({
@@ -39,7 +24,24 @@ const tempWarbandSchema = z.object({
   faction: z.string().min(1, "Faction is required"),
 });
 
-type TempFighter = z.infer<typeof tempFighterSchema>;
+type TempFighter = {
+  id: number;
+  name: string;
+  role: string;
+  weapons: string;
+  toughness: number;
+  wounds: number;
+  move: number;
+  points: number;
+  currentWounds: number;
+  isActivated: boolean;
+  hasActivatedThisRound: boolean;
+  treasure: number;
+  statusEffects: string[];
+  abilityDice: number[];
+  warbandId: string;
+};
+
 type TempWarband = z.infer<typeof tempWarbandSchema> & {
   fighters: TempFighter[];
 };
@@ -60,22 +62,28 @@ export default function TempWarband() {
     },
   });
 
-  // Form for adding fighters
-  const fighterForm = useForm<TempFighter>({
-    resolver: zodResolver(tempFighterSchema),
-    defaultValues: {
-      name: "",
-      type: "Warrior",
-      move: 4,
-      toughness: 3,
-      wounds: 10,
-      strength: 3,
-      attacks: 2,
-      damage: "1",
-      criticalDamage: "2",
-      range: 1,
-    },
-  });
+  // Load fighters from localStorage when component mounts or warband changes
+  useEffect(() => {
+    if (warband) {
+      const savedFighters = JSON.parse(localStorage.getItem('tempFighters') || '[]');
+      const warbandFighters = savedFighters.filter((f: TempFighter) => f.warbandId === warband.name);
+      setFighters(warbandFighters);
+    }
+  }, [warband]);
+
+  // Refresh fighters when returning from AddFighter page
+  useEffect(() => {
+    const handleStorage = () => {
+      if (warband) {
+        const savedFighters = JSON.parse(localStorage.getItem('tempFighters') || '[]');
+        const warbandFighters = savedFighters.filter((f: TempFighter) => f.warbandId === warband.name);
+        setFighters(warbandFighters);
+      }
+    };
+
+    const intervalId = setInterval(handleStorage, 1000); // Check every second
+    return () => clearInterval(intervalId);
+  }, [warband]);
 
   // Create the warband
   const onCreateWarband = (data: z.infer<typeof tempWarbandSchema>) => {
@@ -90,48 +98,25 @@ export default function TempWarband() {
     });
   };
 
-  // Add a fighter to the warband
-  const onAddFighter = (data: TempFighter) => {
+  // Navigate to add fighter page
+  const navigateToAddFighter = () => {
     if (!warband) return;
-
-    const newFighters = [...fighters, data];
-    setFighters(newFighters);
-    setWarband({
-      ...warband,
-      fighters: newFighters,
+    const params = new URLSearchParams({
+      warband: warband.name,
+      return: '/temp-warband'
     });
-
-    // Reset form for next fighter
-    fighterForm.reset({
-      name: "",
-      type: "Warrior",
-      move: 4,
-      toughness: 3,
-      wounds: 10,
-      strength: 3,
-      attacks: 2,
-      damage: "1",
-      criticalDamage: "2",
-      range: 1,
-    });
-
-    toast({
-      title: "Fighter added",
-      description: `${data.name} added to ${warband.name}.`,
-    });
+    setLocation(`/add-fighter?${params.toString()}`);
   };
 
   // Remove a fighter
-  const removeFighter = (index: number) => {
-    if (!warband) return;
-
-    const newFighters = fighters.filter((_, i) => i !== index);
-    setFighters(newFighters);
-    setWarband({
-      ...warband,
-      fighters: newFighters,
-    });
-
+  const removeFighter = (fighterId: number) => {
+    const savedFighters = JSON.parse(localStorage.getItem('tempFighters') || '[]');
+    const updatedFighters = savedFighters.filter((f: TempFighter) => f.id !== fighterId);
+    localStorage.setItem('tempFighters', JSON.stringify(updatedFighters));
+    
+    // Update local state
+    setFighters(fighters.filter(f => f.id !== fighterId));
+    
     toast({
       title: "Fighter removed",
       variant: "destructive",
@@ -140,34 +125,21 @@ export default function TempWarband() {
 
   // Start a game with the temporary warband
   const startGame = () => {
-    if (!warband) return;
+    if (!warband || fighters.length === 0) return;
 
-    // Here we would normally store in localStorage, but for temporary we'll use sessionStorage
-    // which gets cleared when the browser closes
-    const tempWarband = {
-      id: Date.now(), // Use timestamp as temporary ID
+    // Store warband and fighters in sessionStorage for the active game
+    const tempWarbandData = {
+      id: Date.now(),
       name: warband.name,
       faction: warband.faction,
       pointsLimit: 1000,
-      currentPoints: 0,
+      currentPoints: fighters.reduce((sum, f) => sum + f.points, 0),
       description: "Temporary warband",
       createdAt: new Date(),
     };
 
-    const tempFighters = fighters.map((fighter, index) => ({
-      id: Date.now() + index + 1,
-      warbandId: tempWarband.id,
-      ...fighter,
-      battles: 0,
-      kills: 0,
-      deaths: 0,
-      abilities: [],
-      imageUrl: "",
-    }));
-
-    // Store in sessionStorage
-    sessionStorage.setItem('temp_warband', JSON.stringify(tempWarband));
-    sessionStorage.setItem('temp_fighters', JSON.stringify(tempFighters));
+    sessionStorage.setItem('temp_warband', JSON.stringify(tempWarbandData));
+    sessionStorage.setItem('temp_fighters', JSON.stringify(fighters));
 
     toast({
       title: "Temporary warband ready",
@@ -178,28 +150,44 @@ export default function TempWarband() {
     setLocation('/active-game?temp=true');
   };
 
-  const fighterTypes = [
-    "Champion", "Hero", "Leader", "Warrior", "Brute", "Monster", 
-    "Archer", "Scout", "Assassin", "Berserker", "Mage", "Wizard"
-  ];
+  // Clear all temporary data
+  const clearAll = () => {
+    localStorage.removeItem('tempFighters');
+    setWarband(null);
+    setFighters([]);
+    setCurrentTab("create-warband");
+    warbandForm.reset();
+    toast({
+      title: "Cleared",
+      description: "All temporary data has been cleared.",
+    });
+  };
 
   return (
     <div className="w-full px-4 py-4 md:py-8 pb-20">
-      <h1 className="text-2xl md:text-3xl font-cinzel font-bold mb-4 md:mb-6">Create Temporary Warband</h1>
-      <p className="text-muted-foreground mb-4 md:mb-6 text-sm md:text-base">
-        Create a warband for one-time use that won't be saved to your collection.
-        Perfect for quick games or testing.
-      </p>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-cinzel font-bold mb-2">Create Temporary Warband</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Create a warband for one-time use that won't be saved to your collection.
+          </p>
+        </div>
+        {warband && (
+          <Button variant="outline" onClick={clearAll} size="sm">
+            Clear All
+          </Button>
+        )}
+      </div>
 
       <Tabs defaultValue="create-warband" value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="mb-4 grid w-full grid-cols-3 h-auto">
+        <TabsList className="mb-6 grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="create-warband" className="text-xs md:text-sm">Create Warband</TabsTrigger>
           <TabsTrigger value="add-fighters" disabled={!warband} className="text-xs md:text-sm">Add Fighters</TabsTrigger>
           <TabsTrigger value="review" disabled={!warband || fighters.length === 0} className="text-xs md:text-sm">Review & Start</TabsTrigger>
         </TabsList>
 
         <TabsContent value="create-warband">
-          <Card>
+          <Card className="max-w-2xl">
             <CardHeader>
               <CardTitle>Warband Details</CardTitle>
               <CardDescription>
@@ -208,7 +196,7 @@ export default function TempWarband() {
             </CardHeader>
             <CardContent>
               <Form {...warbandForm}>
-                <form onSubmit={warbandForm.handleSubmit(onCreateWarband)} className="space-y-4">
+                <form onSubmit={warbandForm.handleSubmit(onCreateWarband)} className="space-y-6">
                   <FormField
                     control={warbandForm.control}
                     name="name"
@@ -216,7 +204,11 @@ export default function TempWarband() {
                       <FormItem>
                         <FormLabel>Warband Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Red Reavers" {...field} />
+                          <Input 
+                            placeholder="e.g. Red Reavers" 
+                            {...field} 
+                            className="text-base"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -230,14 +222,18 @@ export default function TempWarband() {
                       <FormItem>
                         <FormLabel>Faction</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Chaos, Death, Order" {...field} />
+                          <Input 
+                            placeholder="e.g. Chaos, Death, Order" 
+                            {...field} 
+                            className="text-base"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full h-12 text-base">
                     Create Warband
                   </Button>
                 </form>
@@ -247,319 +243,144 @@ export default function TempWarband() {
         </TabsContent>
 
         <TabsContent value="add-fighters">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Add Fighter Button */}
             <Card>
-              <CardHeader>
-                <CardTitle>Add Fighter</CardTitle>
-                <CardDescription>
-                  Add fighters to your temporary warband.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 mobile-safe">
-                <Form {...fighterForm}>
-                  <form onSubmit={fighterForm.handleSubmit(onAddFighter)} className="space-y-4">
-                    <FormField
-                      control={fighterForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fighter Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. Thorgar" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={fighterForm.control}
-                      name="type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Type</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="e.g. Warrior, Champion, etc." 
-                              {...field} 
-                              list="fighter-types"
-                            />
-                          </FormControl>
-                          <datalist id="fighter-types">
-                            {fighterTypes.map(type => (
-                              <option key={type} value={type} />
-                            ))}
-                          </datalist>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <FormField
-                        control={fighterForm.control}
-                        name="move"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Move</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={fighterForm.control}
-                        name="toughness"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Toughness</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={fighterForm.control}
-                        name="wounds"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Wounds</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={fighterForm.control}
-                        name="strength"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Strength</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Add Fighters to {warband?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Current fighters: {fighters.length}
+                      </p>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <FormField
-                        control={fighterForm.control}
-                        name="attacks"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Attacks</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={fighterForm.control}
-                        name="damage"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Damage</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. 1-3" {...field} />
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              Format as X or X-Y
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={fighterForm.control}
-                        name="criticalDamage"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Critical</FormLabel>
-                            <FormControl>
-                              <Input placeholder="e.g. 3-6" {...field} />
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              Critical damage
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={fighterForm.control}
-                        name="range"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Range</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              In inches
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Button type="submit" className="w-full">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Fighter
-                    </Button>
-                  </form>
-                </Form>
+                  </div>
+                  <Button 
+                    onClick={navigateToAddFighter}
+                    className="h-12 px-6 text-base"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Fighter
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Warband: {warband?.name}</CardTitle>
-                  <CardDescription>{warband?.faction}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {fighters.length === 0 ? (
-                    <div className="text-center p-4 border border-dashed rounded-md border-muted">
-                      <p className="text-muted-foreground">No fighters added yet.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {fighters.map((fighter, index) => (
-                        <div key={index} className="border p-3 rounded-md flex justify-between items-start">
+            {/* Fighter List */}
+            {fighters.length > 0 && (
+              <div className="grid gap-4">
+                <h3 className="text-lg font-semibold">Current Fighters</h3>
+                {fighters.map((fighter) => (
+                  <Card key={fighter.id}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Sword className="h-4 w-4 text-muted-foreground" />
                           <div>
-                            <h3 className="font-medium">{fighter.name}</h3>
-                            <p className="text-sm text-muted-foreground">{fighter.type}</p>
-                            <div className="grid grid-cols-4 gap-1 text-xs text-center mt-2">
-                              <div>
-                                <span className="block text-muted-foreground">M</span>
-                                <span>{fighter.move}"</span>
-                              </div>
-                              <div>
-                                <span className="block text-muted-foreground">T</span>
-                                <span>{fighter.toughness}</span>
-                              </div>
-                              <div>
-                                <span className="block text-muted-foreground">W</span>
-                                <span>{fighter.wounds}</span>
-                              </div>
-                              <div>
-                                <span className="block text-muted-foreground">S</span>
-                                <span>{fighter.strength}</span>
-                              </div>
-                            </div>
+                            <h4 className="font-medium">{fighter.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {fighter.role} • {fighter.weapons} • {fighter.points} pts
+                            </p>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => removeFighter(index)}
-                            className="text-destructive hover:text-destructive/80"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeFighter(fighter.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-                  {fighters.length > 0 && (
-                    <div className="mt-4">
-                      <Button 
-                        onClick={() => setCurrentTab("review")} 
-                        className="w-full"
-                      >
-                        Continue to Review
-                      </Button>
-                    </div>
-                  )}
+            {fighters.length === 0 && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No fighters added yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Click "Add Fighter" to start building your warband
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
-            </div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="review">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ready to Start Game</CardTitle>
-              <CardDescription>
-                Review your temporary warband details before starting.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium">{warband?.name}</h3>
-                  <p className="text-muted-foreground">{warband?.faction}</p>
-                </div>
-
-                <div>
-                  <h4 className="font-medium mb-2">Fighters: {fighters.length}</h4>
-                  <div className="border rounded-md p-4 space-y-3">
-                    {fighters.map((fighter, index) => (
-                      <div key={index} className="p-3 rounded-md bg-card flex justify-between">
-                        <div>
-                          <h3 className="font-medium">{fighter.name}</h3>
-                          <p className="text-sm text-muted-foreground">{fighter.type}</p>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs text-center">
-                          <div>
-                            <span className="block text-muted-foreground">M</span>
-                            <span>{fighter.move}"</span>
-                          </div>
-                          <div>
-                            <span className="block text-muted-foreground">T</span>
-                            <span>{fighter.toughness}</span>
-                          </div>
-                          <div>
-                            <span className="block text-muted-foreground">W</span>
-                            <span>{fighter.wounds}</span>
-                          </div>
-                          <div>
-                            <span className="block text-muted-foreground">A</span>
-                            <span>{fighter.attacks}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+          <div className="space-y-6">
+            {/* Warband Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5" />
+                  Ready to Start
+                </CardTitle>
+                <CardDescription>
+                  Review your temporary warband and start the game when ready.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Warband:</span>
+                    <p className="font-medium">{warband?.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Faction:</span>
+                    <p className="font-medium">{warband?.faction}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Fighters:</span>
+                    <p className="font-medium">{fighters.length}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Points:</span>
+                    <p className="font-medium">{fighters.reduce((sum, f) => sum + f.points, 0)}</p>
                   </div>
                 </div>
 
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setCurrentTab("add-fighters")}>
-                    Back to Edit
-                  </Button>
-                  <Button onClick={startGame}>
-                    Start Game with Temporary Warband
-                  </Button>
-                </div>
+                <Button onClick={startGame} className="w-full h-12 text-base">
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Game
+                </Button>
+              </CardContent>
+            </Card>
 
-                <div className="border-t pt-4 mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Note:</strong> This warband is temporary and will only be available for this game session.
-                    It will not be saved to your collection of warbands.
-                  </p>
+            {/* Fighter Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Fighter Roster</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {fighters.map((fighter) => (
+                    <div key={fighter.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div>
+                        <p className="font-medium">{fighter.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {fighter.role} • T{fighter.toughness} W{fighter.wounds} M{fighter.move}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{fighter.points} pts</p>
+                        <p className="text-sm text-muted-foreground">{fighter.weapons}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
