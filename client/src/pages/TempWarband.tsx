@@ -184,18 +184,18 @@ export default function TempWarband() {
   ];
 
   return (
-    <div className="container mx-auto my-8">
-      <h1 className="text-3xl font-cinzel font-bold mb-6">Create Temporary Warband</h1>
-      <p className="text-muted-foreground mb-6">
+    <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
+      <h1 className="text-2xl md:text-3xl font-cinzel font-bold mb-4 md:mb-6">Create Temporary Warband</h1>
+      <p className="text-muted-foreground mb-4 md:mb-6 text-sm md:text-base">
         Create a warband for one-time use that won't be saved to your collection.
         Perfect for quick games or testing.
       </p>
 
       <Tabs defaultValue="create-warband" value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="create-warband">Create Warband</TabsTrigger>
-          <TabsTrigger value="add-fighters" disabled={!warband}>Add Fighters</TabsTrigger>
-          <TabsTrigger value="review" disabled={!warband || fighters.length === 0}>Review & Start</TabsTrigger>
+        <TabsList className="mb-4 grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="create-warband" className="text-xs md:text-sm">Create Warband</TabsTrigger>
+          <TabsTrigger value="add-fighters" disabled={!warband} className="text-xs md:text-sm">Add Fighters</TabsTrigger>
+          <TabsTrigger value="review" disabled={!warband || fighters.length === 0} className="text-xs md:text-sm">Review & Start</TabsTrigger>
         </TabsList>
 
         <TabsContent value="create-warband">
@@ -248,14 +248,14 @@ export default function TempWarband() {
 
         <TabsContent value="add-fighters">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className="max-h-[80vh] overflow-y-auto">
               <CardHeader>
                 <CardTitle>Add Fighter</CardTitle>
                 <CardDescription>
                   Add fighters to your temporary warband.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <Form {...fighterForm}>
                   <form onSubmit={fighterForm.handleSubmit(onAddFighter)} className="space-y-4">
                     <FormField
@@ -295,7 +295,7 @@ export default function TempWarband() {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <FormField
                         control={fighterForm.control}
                         name="move"
@@ -353,7 +353,7 @@ export default function TempWarband() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <FormField
                         control={fighterForm.control}
                         name="attacks"
@@ -430,12 +430,12 @@ export default function TempWarband() {
             </Card>
 
             <div>
-              <Card>
+              <Card className="max-h-[80vh] overflow-y-auto">
                 <CardHeader>
                   <CardTitle>Warband: {warband?.name}</CardTitle>
                   <CardDescription>{warband?.faction}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   {fighters.length === 0 ? (
                     <div className="text-center p-4 border border-dashed rounded-md border-muted">
                       <p className="text-muted-foreground">No fighters added yet.</p>

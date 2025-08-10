@@ -462,33 +462,33 @@ export default function ActiveGame() {
   const activeWarband = activeGame.activeWarbands[activeGame.warbandTurn];
 
   return (
-    <div className="container mx-auto my-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-cinzel font-bold">Active Game Tracker</h1>
+    <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-4 sm:gap-0">
+        <h1 className="text-2xl md:text-3xl font-cinzel font-bold">Active Game Tracker</h1>
         <div className="flex items-center space-x-2">
           <div className="bg-card px-3 py-1 rounded-md">
             <span className="text-sm text-muted-foreground">Round</span>
             <span className="ml-2 font-bold">{activeGame.battleRound}</span>
           </div>
-          <Button variant="outline" onClick={resetGame}>
+          <Button variant="outline" onClick={resetGame} size="sm">
             End Game
           </Button>
         </div>
       </div>
       
       <Tabs defaultValue="warband">
-        <TabsList className="mb-4">
-          <TabsTrigger value="warband">Warband View</TabsTrigger>
-          <TabsTrigger value="dice">Dice Pool</TabsTrigger>
-          <TabsTrigger value="battle-tools">Battle Tools</TabsTrigger>
+        <TabsList className="mb-4 grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="warband" className="text-xs md:text-sm">Warband View</TabsTrigger>
+          <TabsTrigger value="dice" className="text-xs md:text-sm">Dice Pool</TabsTrigger>
+          <TabsTrigger value="battle-tools" className="text-xs md:text-sm">Battle Tools</TabsTrigger>
         </TabsList>
         
         <TabsContent value="warband">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {activeGame.activeWarbands.map((activeWarband, warbandIndex) => (
               <Card 
                 key={activeWarband.warband.id} 
-                className={`${activeGame.warbandTurn === warbandIndex ? 'ring-2 ring-primary' : ''}`}
+                className={`max-h-[80vh] overflow-y-auto ${activeGame.warbandTurn === warbandIndex ? 'ring-2 ring-primary' : ''}`}
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
@@ -604,7 +604,7 @@ export default function ActiveGame() {
                         </div>
 
                         {/* Fighter Stats */}
-                        <div className="grid grid-cols-6 gap-2 text-xs text-center mb-3">
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-xs text-center mb-3">
                           <div className="bg-muted/50 p-2 rounded">
                             <span className="block text-muted-foreground">Move</span>
                             <span className="font-medium">{fighter.move}"</span>
@@ -665,7 +665,7 @@ export default function ActiveGame() {
                         )}
 
                         {/* Quick Actions */}
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -818,7 +818,7 @@ export default function ActiveGame() {
         </TabsContent>
 
         <TabsContent value="battle-tools">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {/* Battle Summary */}
             <Card>
               <CardHeader>
