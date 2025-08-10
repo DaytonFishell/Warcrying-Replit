@@ -20,9 +20,9 @@ export default function NavigationTabs() {
             <Link 
               key={tab.path}
               href={tab.path}
+              className={`py-2 px-1 font-medium text-lg whitespace-nowrap transition ${location === tab.path ? 'tab-active' : 'text-foreground hover:text-primary'}`}
             >
-              <a className={`py-2 px-1 font-medium text-lg whitespace-nowrap transition ${location === tab.path ? 'tab-active' : 'text-foreground hover:text-primary'}`}>
-                <i className={`fas fa-${tab.icon} mr-2`}>
+                <span>
                   {tab.icon === 'home' && (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-2">
                       <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -64,9 +64,8 @@ export default function NavigationTabs() {
                       <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
                     </svg>
                   )}
-                </i>
+                </span>
                 {tab.label}
-              </a>
             </Link>
           ))}
         </nav>
