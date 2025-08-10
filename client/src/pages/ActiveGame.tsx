@@ -462,7 +462,7 @@ export default function ActiveGame() {
   const activeWarband = activeGame.activeWarbands[activeGame.warbandTurn];
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
+    <div className="w-full px-4 py-4 md:py-8 pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-4 sm:gap-0">
         <h1 className="text-2xl md:text-3xl font-cinzel font-bold">Active Game Tracker</h1>
         <div className="flex items-center space-x-2">
@@ -488,7 +488,7 @@ export default function ActiveGame() {
             {activeGame.activeWarbands.map((activeWarband, warbandIndex) => (
               <Card 
                 key={activeWarband.warband.id} 
-                className={`max-h-[80vh] overflow-y-auto ${activeGame.warbandTurn === warbandIndex ? 'ring-2 ring-primary' : ''}`}
+                className={`${activeGame.warbandTurn === warbandIndex ? 'ring-2 ring-primary' : ''}`}
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">

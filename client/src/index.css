@@ -49,8 +49,21 @@
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground font-body;
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  body {
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
+  }
+  
+  #root {
+    min-height: 100vh;
+    height: auto;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -59,6 +72,10 @@
 }
 
 @layer components {
+  .mobile-safe {
+    padding-bottom: 2rem;
+  }
+  
   .card {
     @apply bg-card rounded-lg shadow-lg transition-transform hover:translate-y-[-4px];
   }

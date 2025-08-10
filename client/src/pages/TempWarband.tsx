@@ -184,7 +184,7 @@ export default function TempWarband() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 max-w-7xl">
+    <div className="w-full px-4 py-4 md:py-8 pb-20">
       <h1 className="text-2xl md:text-3xl font-cinzel font-bold mb-4 md:mb-6">Create Temporary Warband</h1>
       <p className="text-muted-foreground mb-4 md:mb-6 text-sm md:text-base">
         Create a warband for one-time use that won't be saved to your collection.
@@ -248,14 +248,14 @@ export default function TempWarband() {
 
         <TabsContent value="add-fighters">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="max-h-[80vh] overflow-y-auto">
+            <Card>
               <CardHeader>
                 <CardTitle>Add Fighter</CardTitle>
                 <CardDescription>
                   Add fighters to your temporary warband.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 mobile-safe">
                 <Form {...fighterForm}>
                   <form onSubmit={fighterForm.handleSubmit(onAddFighter)} className="space-y-4">
                     <FormField
@@ -430,7 +430,7 @@ export default function TempWarband() {
             </Card>
 
             <div>
-              <Card className="max-h-[80vh] overflow-y-auto">
+              <Card>
                 <CardHeader>
                   <CardTitle>Warband: {warband?.name}</CardTitle>
                   <CardDescription>{warband?.faction}</CardDescription>
