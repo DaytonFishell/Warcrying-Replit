@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+// Removed Dialog imports - using inline forms instead
 import { setLocalStorage } from "@/lib/storage";
 
 // Extend the insertWarbandSchema with validation rules
@@ -117,14 +117,14 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
 
   return (
     <div>
-      <DialogHeader>
-        <DialogTitle>{isEditing ? "Edit Warband" : "Create New Warband"}</DialogTitle>
-        <DialogDescription>
+      <div className="space-y-1.5 pb-4">
+        <h2 className="text-lg font-semibold">{isEditing ? "Edit Warband" : "Create New Warband"}</h2>
+        <p className="text-sm text-muted-foreground">
           {isEditing
             ? "Update your warband details below."
             : "Fill in the details to create a new warband."}
-        </DialogDescription>
-      </DialogHeader>
+        </p>
+      </div>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
