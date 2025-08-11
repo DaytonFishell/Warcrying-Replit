@@ -2,14 +2,16 @@ import { useState } from "react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { SunMoon, Settings, FileDown, FileUp } from "lucide-react";
+import { SunMoon, Settings, FileDown, FileUp, LogIn, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getLocalStorage, setLocalStorage } from "@/lib/storage";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
   const { theme, setTheme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -107,29 +109,47 @@ export default function Header() {
             <SunMoon className="h-4 w-4" />
           </Button>
           
-          <Button onClick={handleExport} variant="secondary" size="sm" className="hidden sm:flex">
-            <FileDown className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          
-          <Button variant="outline" size="sm" onClick={() => document.getElementById('import-file')?.click()} className="hidden sm:flex">
-            <FileUp className="mr-2 h-4 w-4" />
-            Import
-          </Button>
-          <input 
-            id="import-file" 
-            type="file" 
-            accept=".json" 
-            className="hidden" 
-            onChange={handleImport}
-          />
-          
-          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-5 w-5" />
+          {isAuthenticated && (
+            <>
+              <Button onClick={handleExport} variant="secondary" size="sm" className="hidden sm:flex">
+                <FileDown className="mr-2 h-4 w-4" />
+                Export
               </Button>
-            </DialogTrigger>
+              
+              <Button variant="outline" size="sm" onClick={() => document.getElementById('import-file')?.click()} className="hidden sm:flex">
+                <FileUp className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+              <input 
+                id="import-file" 
+                type="file" 
+                accept=".json" 
+                className="hidden" 
+                onChange={handleImport}
+              />
+              
+            </>
+          )}
+          
+          {isAuthenticated ? (
+            <Button variant="ghost" onClick={() => window.location.href = '/api/logout'}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          ) : (
+            <Button onClick={() => window.location.href = '/api/login'}>
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
+            </Button>
+          )}
+          
+          {isAuthenticated && (
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Settings</DialogTitle>
@@ -180,6 +200,7 @@ export default function Header() {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
     </header>

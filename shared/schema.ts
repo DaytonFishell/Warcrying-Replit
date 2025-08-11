@@ -1,11 +1,37 @@
-import { pgTable, text, serial, integer, boolean, json, timestamp, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, json, timestamp, foreignKey, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { sql } from 'drizzle-orm';
+
+// Session storage table.
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: json("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table.
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Warbands table
 export const warbands = pgTable("warbands", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   faction: text("faction").notNull(),
   pointsLimit: integer("points_limit").notNull().default(1000),
@@ -78,8 +104,22 @@ export const insertBattleFighterStatsSchema = createInsertSchema(battleFighterSt
   id: true,
 });
 
+// User schemas
+export const upsertUserSchema = createInsertSchema(users).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Relations
-export const warbandsRelations = relations(warbands, ({ many }) => ({
+export const usersRelations = relations(users, ({ many }) => ({
+  warbands: many(warbands),
+}));
+
+export const warbandsRelations = relations(warbands, ({ one, many }) => ({
+  user: one(users, {
+    fields: [warbands.userId],
+    references: [users.id],
+  }),
   fighters: many(fighters),
   battleWins: many(battles, { relationName: "winnerWarband" }),
   battleLosses: many(battles, { relationName: "loserWarband" }),
@@ -119,6 +159,9 @@ export const battleFighterStatsRelations = relations(battleFighterStats, ({ one 
 }));
 
 // Types
+export type User = typeof users.$inferSelect;
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
+
 export type Warband = typeof warbands.$inferSelect;
 export type InsertWarband = z.infer<typeof insertWarbandSchema>;
 
