@@ -70,6 +70,7 @@ export default function Fighters() {
           </Select>
         </div>
         
+        {/* Dialog temporarily disabled for mobile compatibility 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90">
@@ -83,6 +84,13 @@ export default function Fighters() {
             <FighterForm onSuccess={() => setIsDialogOpen(false)} />
           </DialogContent>
         </Dialog>
+        */}
+        <Button className="bg-primary hover:bg-primary/90" disabled>
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          New Fighter (Use Temp Warband)
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

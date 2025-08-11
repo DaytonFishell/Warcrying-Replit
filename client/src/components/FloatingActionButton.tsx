@@ -30,17 +30,17 @@ export default function FloatingActionButton() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setActiveDialog("warband")}>
+            <DropdownMenuItem onClick={() => setLocation("/temp-warband")}>
               <Users className="mr-2 h-4 w-4" />
-              <span>New Warband</span>
+              <span>Create Temp Warband</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveDialog("fighter")}>
+            <DropdownMenuItem disabled>
               <User className="mr-2 h-4 w-4" />
-              <span>New Fighter</span>
+              <span>New Fighter (Use Temp Warband)</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveDialog("battle")}>
+            <DropdownMenuItem disabled>
               <Swords className="mr-2 h-4 w-4" />
-              <span>Log Battle</span>
+              <span>Log Battle (Coming Soon)</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation("/rules")}>
               <ScrollText className="mr-2 h-4 w-4" />
@@ -50,23 +50,7 @@ export default function FloatingActionButton() {
         </DropdownMenu>
       </div>
       
-      <Dialog open={activeDialog === "warband"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-[550px]">
-          <WarbandForm onSuccess={() => setActiveDialog(null)} />
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={activeDialog === "fighter"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-[650px]">
-          <FighterForm onSuccess={() => setActiveDialog(null)} />
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={activeDialog === "battle"} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-[650px]">
-          <BattleForm onSuccess={() => setActiveDialog(null)} />
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs temporarily disabled for mobile compatibility */}
     </>
   );
 }
