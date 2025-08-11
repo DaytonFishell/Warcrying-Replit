@@ -17,21 +17,34 @@ export default function Header() {
     setTheme(theme === "dark" ? "light" : "dark");
   };
   
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
-      const data = {
-        warbands: getLocalStorage("warbands") || [],
-        fighters: getLocalStorage("fighters") || [],
-        battles: getLocalStorage("battles") || [],
-        battleFighterStats: getLocalStorage("battleFighterStats") || []
-      };
+      // Fetch all user data from the database
+      const response = await fetch("/api/export", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
+      // Create filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `warcry-data-${date}.json`;
+      
+      // Create and download the file
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       
       const a = document.createElement("a");
       a.href = url;
-      a.download = "warcry-data.json";
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       
@@ -42,12 +55,13 @@ export default function Header() {
       
       toast({
         title: "Export Successful",
-        description: "Your Warcry data has been exported successfully.",
+        description: `Your Warcry data (${data.metadata.totalWarbands} warbands, ${data.metadata.totalFighters} fighters, ${data.metadata.totalBattles} battles) has been exported successfully.`,
       });
     } catch (error) {
+      console.error("Export error:", error);
       toast({
         title: "Export Failed",
-        description: "There was an error exporting your data.",
+        description: "There was an error exporting your data. Please try again.",
         variant: "destructive",
       });
     }

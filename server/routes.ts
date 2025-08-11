@@ -319,6 +319,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export route - get all user data
+  app.get("/api/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get all user data
+      const warbands = await storage.getWarbands(userId);
+      const fighters = await storage.getFighters(userId);
+      const battles = await storage.getBattles(userId);
+      
+      // Create export data structure
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        userId: userId,
+        warbands: warbands,
+        fighters: fighters,
+        battles: battles,
+        metadata: {
+          totalWarbands: warbands.length,
+          totalFighters: fighters.length,
+          totalBattles: battles.length,
+          appVersion: "1.0.0"
+        }
+      };
+      
+      res.json(exportData);
+    } catch (error) {
+      console.error("Error exporting user data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
