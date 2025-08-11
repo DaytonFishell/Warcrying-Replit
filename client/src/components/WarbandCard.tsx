@@ -160,29 +160,28 @@ export default function WarbandCard({ warband }: WarbandCardProps) {
             <Button 
               variant="default" 
               size="sm" 
-              disabled
+              onClick={() => setIsEditing(!isEditing)}
               className="bg-background hover:bg-primary/20"
             >
               <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
-              Edit (Mobile Fix)
+              {isEditing ? "Cancel" : "Edit"}
             </Button>
           </div>
         </div>
       </div>
       
-      {/* Dialog disabled for mobile compatibility 
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-[550px]">
+      {/* Inline Edit Form */}
+      {isEditing && (
+        <div className="mt-4 border rounded-lg p-4 bg-muted/50">
           <WarbandForm 
             warband={warband} 
             onSuccess={() => setIsEditing(false)} 
           />
-        </DialogContent>
-      </Dialog>
-      */}
+        </div>
+      )}
     </>
   );
 }

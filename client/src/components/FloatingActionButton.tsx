@@ -34,13 +34,13 @@ export default function FloatingActionButton() {
               <Users className="mr-2 h-4 w-4" />
               <span>Create Temp Warband</span>
             </DropdownMenuItem>
-            <DropdownMenuItem disabled>
+            <DropdownMenuItem onClick={() => setLocation("/fighters")}>
               <User className="mr-2 h-4 w-4" />
-              <span>New Fighter (Use Temp Warband)</span>
+              <span>New Fighter</span>
             </DropdownMenuItem>
-            <DropdownMenuItem disabled>
+            <DropdownMenuItem onClick={() => setLocation("/battles")}>
               <Swords className="mr-2 h-4 w-4" />
-              <span>Log Battle (Coming Soon)</span>
+              <span>Log Battle</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLocation("/rules")}>
               <ScrollText className="mr-2 h-4 w-4" />
