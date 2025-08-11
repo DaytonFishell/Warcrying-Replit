@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertWarbandSchema, 
   insertFighterSchema, 
@@ -9,19 +10,36 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Warband routes
-  app.get("/api/warbands", async (req, res) => {
-    const warbands = await storage.getWarbands();
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  // Warband routes (protected)
+  app.get("/api/warbands", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const warbands = await storage.getWarbands(userId);
     res.json(warbands);
   });
   
-  app.get("/api/warbands/:id", async (req, res) => {
+  app.get("/api/warbands/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid warband ID" });
     }
     
-    const warband = await storage.getWarband(id);
+    const warband = await storage.getWarband(id, userId);
     if (!warband) {
       return res.status(404).json({ message: "Warband not found" });
     }
@@ -29,9 +47,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(warband);
   });
   
-  app.post("/api/warbands", async (req, res) => {
+  app.post("/api/warbands", isAuthenticated, async (req: any, res) => {
     try {
-      const validatedData = insertWarbandSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      const validatedData = insertWarbandSchema.parse({ ...req.body, userId });
       const warband = await storage.createWarband(validatedData);
       res.status(201).json(warband);
     } catch (error) {
@@ -39,15 +58,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/warbands/:id", async (req, res) => {
+  app.patch("/api/warbands/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid warband ID" });
     }
     
     try {
-      const validatedData = insertWarbandSchema.partial().parse(req.body);
-      const warband = await storage.updateWarband(id, validatedData);
+      const validatedData = insertWarbandSchema.partial().omit({ userId: true }).parse(req.body);
+      const warband = await storage.updateWarband(id, validatedData, userId);
       
       if (!warband) {
         return res.status(404).json({ message: "Warband not found" });
@@ -59,13 +80,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/warbands/:id", async (req, res) => {
+  app.delete("/api/warbands/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid warband ID" });
     }
     
-    const success = await storage.deleteWarband(id);
+    const success = await storage.deleteWarband(id, userId);
     if (!success) {
       return res.status(404).json({ message: "Warband not found" });
     }
@@ -73,30 +96,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
   
-  // Fighter routes
-  app.get("/api/fighters", async (req, res) => {
+  // Fighter routes (protected)
+  app.get("/api/fighters", isAuthenticated, async (req: any, res) => {
     const warbandId = req.query.warbandId ? parseInt(req.query.warbandId as string, 10) : undefined;
+    const userId = req.user.claims.sub;
     
     if (warbandId) {
       if (isNaN(warbandId)) {
         return res.status(400).json({ message: "Invalid warband ID" });
       }
       
-      const fighters = await storage.getFightersByWarband(warbandId);
+      const fighters = await storage.getFightersByWarband(warbandId, userId);
       return res.json(fighters);
     }
     
-    const fighters = await storage.getFighters();
+    const fighters = await storage.getFighters(userId);
     res.json(fighters);
   });
   
-  app.get("/api/fighters/:id", async (req, res) => {
+  app.get("/api/fighters/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid fighter ID" });
     }
     
-    const fighter = await storage.getFighter(id);
+    const fighter = await storage.getFighter(id, userId);
     if (!fighter) {
       return res.status(404).json({ message: "Fighter not found" });
     }
@@ -104,8 +130,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(fighter);
   });
   
-  app.post("/api/fighters", async (req, res) => {
+  app.post("/api/fighters", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
+      // Verify that the warband belongs to the user
+      const warbandId = req.body.warbandId;
+      if (warbandId) {
+        const warband = await storage.getWarband(warbandId, userId);
+        if (!warband) {
+          return res.status(403).json({ message: "Cannot add fighter to warband you don't own" });
+        }
+      }
+      
       const validatedData = insertFighterSchema.parse(req.body);
       const fighter = await storage.createFighter(validatedData);
       res.status(201).json(fighter);
@@ -114,15 +151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/fighters/:id", async (req, res) => {
+  app.patch("/api/fighters/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid fighter ID" });
     }
     
     try {
       const validatedData = insertFighterSchema.partial().parse(req.body);
-      const fighter = await storage.updateFighter(id, validatedData);
+      const fighter = await storage.updateFighter(id, validatedData, userId);
       
       if (!fighter) {
         return res.status(404).json({ message: "Fighter not found" });
@@ -134,13 +173,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/fighters/:id", async (req, res) => {
+  app.delete("/api/fighters/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid fighter ID" });
     }
     
-    const success = await storage.deleteFighter(id);
+    const success = await storage.deleteFighter(id, userId);
     if (!success) {
       return res.status(404).json({ message: "Fighter not found" });
     }
@@ -148,19 +189,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
   
-  // Battle routes
-  app.get("/api/battles", async (req, res) => {
-    const battles = await storage.getBattles();
+  // Battle routes (protected)
+  app.get("/api/battles", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const battles = await storage.getBattles(userId);
     res.json(battles);
   });
   
-  app.get("/api/battles/:id", async (req, res) => {
+  app.get("/api/battles/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid battle ID" });
     }
     
-    const battle = await storage.getBattle(id);
+    const battle = await storage.getBattle(id, userId);
     if (!battle) {
       return res.status(404).json({ message: "Battle not found" });
     }
@@ -168,8 +212,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(battle);
   });
   
-  app.post("/api/battles", async (req, res) => {
+  app.post("/api/battles", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
+      // Verify that both warbands belong to the user
+      const { winnerId, loserId } = req.body;
+      
+      if (winnerId) {
+        const winnerWarband = await storage.getWarband(winnerId, userId);
+        if (!winnerWarband) {
+          return res.status(403).json({ message: "Winner warband not found or not owned by you" });
+        }
+      }
+      
+      if (loserId) {
+        const loserWarband = await storage.getWarband(loserId, userId);
+        if (!loserWarband) {
+          return res.status(403).json({ message: "Loser warband not found or not owned by you" });
+        }
+      }
+      
       const validatedData = insertBattleSchema.parse(req.body);
       const battle = await storage.createBattle(validatedData);
       res.status(201).json(battle);
@@ -178,15 +241,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/battles/:id", async (req, res) => {
+  app.patch("/api/battles/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid battle ID" });
     }
     
     try {
       const validatedData = insertBattleSchema.partial().parse(req.body);
-      const battle = await storage.updateBattle(id, validatedData);
+      const battle = await storage.updateBattle(id, validatedData, userId);
       
       if (!battle) {
         return res.status(404).json({ message: "Battle not found" });
@@ -198,13 +263,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/battles/:id", async (req, res) => {
+  app.delete("/api/battles/:id", isAuthenticated, async (req: any, res) => {
     const id = parseInt(req.params.id, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid battle ID" });
     }
     
-    const success = await storage.deleteBattle(id);
+    const success = await storage.deleteBattle(id, userId);
     if (!success) {
       return res.status(404).json({ message: "Battle not found" });
     }
@@ -212,19 +279,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
   
-  // Battle Fighter Stats routes
-  app.get("/api/battles/:battleId/stats", async (req, res) => {
+  // Battle Fighter Stats routes (protected)
+  app.get("/api/battles/:battleId/stats", isAuthenticated, async (req: any, res) => {
     const battleId = parseInt(req.params.battleId, 10);
+    const userId = req.user.claims.sub;
+    
     if (isNaN(battleId)) {
       return res.status(400).json({ message: "Invalid battle ID" });
+    }
+    
+    // Verify user owns the battle before getting stats
+    const battle = await storage.getBattle(battleId, userId);
+    if (!battle) {
+      return res.status(404).json({ message: "Battle not found" });
     }
     
     const stats = await storage.getBattleFighterStats(battleId);
     res.json(stats);
   });
   
-  app.post("/api/battle-fighter-stats", async (req, res) => {
+  app.post("/api/battle-fighter-stats", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const { battleId } = req.body;
+      
+      // Verify user owns the battle
+      if (battleId) {
+        const battle = await storage.getBattle(battleId, userId);
+        if (!battle) {
+          return res.status(403).json({ message: "Battle not found or not owned by you" });
+        }
+      }
+      
       const validatedData = insertBattleFighterStatsSchema.parse(req.body);
       const stat = await storage.createBattleFighterStat(validatedData);
       res.status(201).json(stat);
