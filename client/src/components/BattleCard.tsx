@@ -3,21 +3,10 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Warband, Fighter } from "@shared/schema";
+import type { Battle, Warband, Fighter } from "@shared/schema";
 
 interface BattleCardProps {
-  battle: {
-    id: number;
-    name: string;
-    scenario: string;
-    date: string;
-    winnerId: number;
-    loserId: number;
-    winnerScore: number;
-    loserScore: number;
-    notes?: string;
-    mapType?: string;
-  };
+  battle: Battle;
   warbands?: Warband[];
 }
 

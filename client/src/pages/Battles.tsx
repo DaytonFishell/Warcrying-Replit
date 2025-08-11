@@ -4,15 +4,15 @@ import { Link } from "wouter";
 import BattleCard from "@/components/BattleCard";
 import BattleForm from "@/components/forms/BattleForm";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+// import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Calendar } from "lucide-react";
-import { Battle, Warband } from "@shared/schema";
+import type { Battle, Warband } from "@shared/schema";
 
 export default function Battles() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scenarioFilter, setScenarioFilter] = useState<string>("all");
   
@@ -24,7 +24,7 @@ export default function Battles() {
     queryKey: ['/api/warbands'],
   });
   
-  const uniqueScenarios = [...new Set(battles?.map(battle => battle.scenario) || [])];
+  const uniqueScenarios = Array.from(new Set(battles?.map(battle => battle.scenario) || []));
   
   const filteredBattles = battles?.filter(battle => {
     const matchesSearch = battle.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -75,28 +75,24 @@ export default function Battles() {
           </Select>
         </div>
         
-        {/* Dialog temporarily disabled for mobile compatibility 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Log New Battle
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[650px]">
-            <BattleForm onSuccess={() => setIsDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
-        */}
-        <Button className="bg-primary hover:bg-primary/90" disabled>
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={() => setShowForm(!showForm)}
+          variant={showForm ? "outline" : "default"}
+        >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          Log New Battle (Mobile Fix in Progress)
+          {showForm ? "Cancel" : "Log New Battle"}
         </Button>
       </div>
+      
+      {/* Inline Battle Form */}
+      {showForm && (
+        <div className="mb-6 border rounded-lg p-4 bg-muted/50">
+          <BattleForm onSuccess={() => setShowForm(false)} />
+        </div>
+      )}
       
       <div className="space-y-4">
         {isLoading ? (
@@ -153,22 +149,7 @@ export default function Battles() {
           ))
         )}
         
-        {!isLoading && sortedBattles?.length === 0 && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <div className="card border-2 border-dashed border-foreground/20 flex items-center justify-center p-8 cursor-pointer hover:border-primary/50 mt-4">
-                <div className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                  <p className="font-medium">Log Your First Battle</p>
-                </div>
-              </div>
-            </DialogTrigger>
-          </Dialog>
-        )}
+        {/* Log Your First Battle card removed - use inline form instead */}
       </div>
     </div>
   );

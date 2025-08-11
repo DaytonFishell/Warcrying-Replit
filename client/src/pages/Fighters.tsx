@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import FighterCard from "@/components/FighterCard";
 import FighterForm from "@/components/forms/FighterForm";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+// import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ import { Search, Filter } from "lucide-react";
 import { Fighter, Warband } from "@shared/schema";
 
 export default function Fighters() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [warbandFilter, setWarbandFilter] = useState<string>("all");
   const [location, setLocation] = useLocation();
@@ -70,28 +70,24 @@ export default function Fighters() {
           </Select>
         </div>
         
-        {/* Dialog temporarily disabled for mobile compatibility 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              New Fighter
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[650px]">
-            <FighterForm onSuccess={() => setIsDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
-        */}
-        <Button className="bg-primary hover:bg-primary/90" disabled>
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={() => setShowForm(!showForm)}
+          variant={showForm ? "outline" : "default"}
+        >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          New Fighter (Use Temp Warband)
+          {showForm ? "Cancel" : "New Fighter"}
         </Button>
       </div>
+      
+      {/* Inline Fighter Form */}
+      {showForm && (
+        <div className="mb-6 border rounded-lg p-4 bg-muted/50">
+          <FighterForm onSuccess={() => setShowForm(false)} />
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoadingFighters ? (
@@ -135,20 +131,7 @@ export default function Fighters() {
               <FighterCard key={fighter.id} fighter={fighter} />
             ))}
             
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <div className="card border-2 border-dashed border-foreground/20 flex items-center justify-center p-10 cursor-pointer hover:border-primary/50">
-                  <div className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                    </div>
-                    <p className="font-medium">Add New Fighter</p>
-                  </div>
-                </div>
-              </DialogTrigger>
-            </Dialog>
+            {/* Add New Fighter Card removed - use inline form instead */}
           </>
         )}
       </div>
