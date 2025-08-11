@@ -111,6 +111,8 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("Form submitted with values:", values);
+    console.log("Form errors:", form.formState.errors);
     setIsSubmitting(true);
     mutation.mutate(values);
   }
@@ -165,8 +167,12 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
                   <FormLabel>Points Limit</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number" 
-                      {...field} 
+                      type="number"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      disabled={field.disabled}
+                      value={field.value || ""}
                       onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : 0)} 
                     />
                   </FormControl>
@@ -183,8 +189,12 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
                   <FormLabel>Current Points</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number" 
-                      {...field} 
+                      type="number"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      disabled={field.disabled}
+                      value={field.value || ""}
                       onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : 0)} 
                     />
                   </FormControl>
