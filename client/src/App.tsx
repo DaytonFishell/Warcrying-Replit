@@ -11,7 +11,6 @@ import Battles from "@/pages/Battles";
 import Rules from "@/pages/Rules";
 import ActiveGame from "@/pages/ActiveGame";
 import TempWarband from "@/pages/TempWarband";
-import AddFighter from "@/pages/AddFighter";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import NavigationTabs from "@/components/NavigationTabs";
@@ -33,7 +32,6 @@ function Router() {
           <Route path="/battles" component={Battles} />
           <Route path="/active-game" component={ActiveGame} />
           <Route path="/temp-warband" component={TempWarband} />
-          <Route path="/add-fighter" component={AddFighter} />
           <Route path="/rules" component={Rules} />
           <Route component={NotFound} />
         </Switch>
