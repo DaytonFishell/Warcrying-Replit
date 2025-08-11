@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+// Removed Dialog imports - using inline forms instead
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -171,14 +171,14 @@ export default function BattleForm({ battle, onSuccess }: BattleFormProps) {
 
   return (
     <div>
-      <DialogHeader>
-        <DialogTitle>{isEditing ? "Edit Battle" : "Log New Battle"}</DialogTitle>
-        <DialogDescription>
+      <div className="space-y-1.5 pb-4">
+        <h2 className="text-lg font-semibold">{isEditing ? "Edit Battle" : "Log New Battle"}</h2>
+        <p className="text-sm text-muted-foreground">
           {isEditing
             ? "Update your battle details below."
             : "Record the details of your battle for your chronicles."}
-        </DialogDescription>
-      </DialogHeader>
+        </p>
+      </div>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
