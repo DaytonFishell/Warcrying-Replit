@@ -20,8 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 // Removed Dialog imports - using inline forms instead
 import { setLocalStorage } from "@/lib/storage";
 
-// Extend the insertWarbandSchema with validation rules
-const formSchema = insertWarbandSchema.extend({
+// Extend the insertWarbandSchema with validation rules, excluding userId (handled by server)
+const formSchema = insertWarbandSchema.omit({ userId: true }).extend({
   name: z.string().min(2, {
     message: "Warband name must be at least 2 characters.",
   }),
