@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import WarbandCard from "@/components/WarbandCard";
 import WarbandForm from "@/components/forms/WarbandForm";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Warbands() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -60,20 +60,24 @@ export default function Warbands() {
           />
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              New Warband
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px]">
-            <WarbandForm onSuccess={() => setIsDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="bg-primary hover:bg-primary/90"
+          onClick={() => setShowForm(!showForm)}
+          variant={showForm ? "outline" : "default"}
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          {showForm ? "Cancel" : "New Warband"}
+        </Button>
       </div>
+      
+      {/* Inline Warband Form */}
+      {showForm && (
+        <div className="mb-6 border rounded-lg p-4 bg-muted/50">
+          <WarbandForm onSuccess={() => setShowForm(false)} />
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
@@ -113,21 +117,6 @@ export default function Warbands() {
             {filteredWarbands?.map(warband => (
               <WarbandCard key={warband.id} warband={warband} />
             ))}
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <div className="card border-2 border-dashed border-foreground/20 flex items-center justify-center p-10 cursor-pointer hover:border-primary/50">
-                  <div className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                    </div>
-                    <p className="font-medium">Add New Warband</p>
-                  </div>
-                </div>
-              </DialogTrigger>
-            </Dialog>
           </>
         )}
       </div>
