@@ -117,6 +117,17 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
     mutation.mutate(values);
   }
 
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Button clicked!");
+    console.log("Form is valid:", form.formState.isValid);
+    console.log("Form errors:", form.formState.errors);
+    console.log("Form values:", form.getValues());
+    
+    // Manually trigger form validation and submission
+    form.handleSubmit(onSubmit)();
+  };
+
   return (
     <div>
       <div className="space-y-1.5 pb-4">
@@ -235,6 +246,7 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
               type="submit" 
               disabled={isSubmitting}
               className="bg-primary hover:bg-primary/90"
+              onClick={handleButtonClick}
             >
               {isSubmitting ? "Saving..." : isEditing ? "Update Warband" : "Create Warband"}
             </Button>
