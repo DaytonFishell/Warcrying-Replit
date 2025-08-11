@@ -39,7 +39,14 @@ A comprehensive tabletop companion app for Warcry games that focuses on real-tim
 
 ## Recent Changes
 
-### January 26, 2025 - Enhanced Battle Tracking System
+### January 26, 2025 - Form Validation and README Completion
+- ✅ Fixed critical userId validation error in WarbandForm (excluded from client-side schema)
+- ✅ Resolved "Create Warband" button functionality - form now submits properly
+- ✅ Added comprehensive debugging system to identify form submission issues
+- ✅ Created professional README.md for GitHub repository with full project documentation
+- ✅ Confirmed authentication system working properly with Landing/Home page flow
+
+### Previous Major Updates - Enhanced Battle Tracking System
 - ✅ Added comprehensive fighter status tracking (treasure, status effects, ability dice)
 - ✅ Implemented visual health management with quick adjustment buttons
 - ✅ Created Battle Tools tab with round management and mass actions
@@ -50,7 +57,7 @@ A comprehensive tabletop companion app for Warcry games that focuses on real-tim
 - ✅ Created battle summary with warband status overview
 - ✅ Added mass action buttons for clearing status effects and ability dice
 
-### Previous Enhancements
+### Core Foundation
 - ✅ PostgreSQL database integration with proper schema design
 - ✅ Temporary warband creation system
 - ✅ Dice pool management with visual grouping
