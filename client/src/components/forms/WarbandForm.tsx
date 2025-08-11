@@ -167,7 +167,7 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
                     <Input 
                       type="number" 
                       {...field} 
-                      onChange={e => field.onChange(parseInt(e.target.value))} 
+                      onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : 0)} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -185,7 +185,7 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
                     <Input 
                       type="number" 
                       {...field} 
-                      onChange={e => field.onChange(parseInt(e.target.value))} 
+                      onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : 0)} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -205,6 +205,7 @@ export default function WarbandForm({ warband, onSuccess }: WarbandFormProps) {
                     placeholder="Add some notes about your warband..."
                     className="resize-none" 
                     {...field} 
+                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
