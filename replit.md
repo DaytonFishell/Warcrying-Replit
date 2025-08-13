@@ -39,6 +39,20 @@ A comprehensive tabletop companion app for Warcry games that focuses on real-tim
 
 ## Recent Changes
 
+### August 13, 2025 - Performance Optimization & Legal Compliance
+- ✅ **Legal Pages**: Added comprehensive Privacy Policy and Terms of Service pages
+- ✅ **Performance Optimizations**:
+  - Created memoized components (MemoizedFighterCard, MemoizedWarbandCard) to prevent unnecessary re-renders
+  - Implemented OptimizedDashboard with staggered data loading for better perceived performance
+  - Added debounce hook for search/input optimization
+  - Applied server-side optimizations: caching, rate limiting, and request size limits
+- ✅ **SEO Improvements**:
+  - Added SEOHead component for dynamic meta tags and Open Graph support
+  - Implemented proper page titles and descriptions for all legal pages
+  - Enhanced discoverability and social media sharing
+- ✅ **Routing Enhancements**: Added /privacy and /terms routes accessible to both authenticated and non-authenticated users
+- ✅ **Footer Updates**: Proper links to legal pages and updated messaging about cloud storage
+
 ### January 26, 2025 - Form Validation and README Completion
 - ✅ Fixed critical userId validation error in WarbandForm (excluded from client-side schema)
 - ✅ Resolved "Create Warband" button functionality - form now submits properly
