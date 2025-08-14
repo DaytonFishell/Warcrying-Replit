@@ -247,14 +247,24 @@ export default function PublicWarbandDetail() {
                     </div>
                   </div>
                 ) : (
-                  <Button
-                    className="w-full"
-                    onClick={() => setShowDuplicateForm(true)}
-                    disabled={duplicateMutation.isPending}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    {isAuthenticated ? "Copy to My Collection" : "Use as Template"}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      className="w-full"
+                      onClick={() => window.location.href = `/active-game?public=${warband.id}`}
+                    >
+                      <Sword className="h-4 w-4 mr-2" />
+                      Play with this Warband
+                    </Button>
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => setShowDuplicateForm(true)}
+                      disabled={duplicateMutation.isPending}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      {isAuthenticated ? "Copy to My Collection" : "Use as Template"}
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -326,7 +336,7 @@ export default function PublicWarbandDetail() {
                           Abilities
                         </h4>
                         <div className="flex flex-wrap gap-1">
-                          {(fighter.abilities as string[]).map((ability, index) => (
+                          {fighter.abilities.map((ability: unknown, index: number) => (
                             <Badge key={index} variant="secondary" className="text-xs">
                               {String(ability)}
                             </Badge>

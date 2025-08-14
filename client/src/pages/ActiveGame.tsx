@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Warband, Fighter } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, XCircle, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Crown, Zap, Heart, Shield, Sword, RotateCcw, ArrowRight } from "lucide-react";
+import { CheckCircle, XCircle, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Crown, Zap, Heart, Shield, Sword, RotateCcw, ArrowRight, Users, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 // Enhanced fighter tracking with treasure and status effects
 type ActiveFighter = Fighter & {
@@ -60,6 +62,9 @@ const DiceIcon = ({ value }: { value: number }) => {
 };
 
 export default function ActiveGame() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  
   // State for the active game
   const [activeGame, setActiveGame] = useState<{
     battleRound: number;
@@ -75,16 +80,21 @@ export default function ActiveGame() {
   const [selectedWarbandIds, setSelectedWarbandIds] = useState<number[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
   const [usingTempWarband, setUsingTempWarband] = useState(false);
+  const [usingPublicWarband, setUsingPublicWarband] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
-  // Check if using a temporary warband (from URL parameter)
+  // Check if using a temporary or public warband (from URL parameters)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Check for temporary warband
     if (urlParams.get('temp') === 'true') {
       const tempWarband = JSON.parse(sessionStorage.getItem('temp_warband') || 'null');
       const tempFighters = JSON.parse(sessionStorage.getItem('temp_fighters') || '[]');
       
       if (tempWarband) {
         setUsingTempWarband(true);
+        setIsGuestMode(!isAuthenticated);
         setSelectedWarbandIds([tempWarband.id]);
         
         // Auto-start game with temp warband
@@ -116,21 +126,75 @@ export default function ActiveGame() {
         setGameStarted(true);
       }
     }
-  }, []);
+    
+    // Check for public warband ID
+    const publicWarbandId = urlParams.get('public');
+    if (publicWarbandId) {
+      setUsingPublicWarband(true);
+      setIsGuestMode(!isAuthenticated);
+      // Will be handled by the public warband fetch
+    }
+  }, [isAuthenticated]);
 
-  // Fetch warbands
+  // Fetch authenticated user's warbands
   const { data: warbands, isLoading: isLoadingWarbands } = useQuery<Warband[]>({
     queryKey: ['/api/warbands'],
-    enabled: !usingTempWarband, // Don't fetch if using temp warband
+    enabled: isAuthenticated && !usingTempWarband && !usingPublicWarband,
   });
 
-  // Fetch fighters for the selected warbands
+  // Fetch fighters for authenticated user's warbands
   const { data: allFighters, isLoading: isLoadingFighters } = useQuery<Fighter[]>({
     queryKey: ['/api/fighters'],
-    enabled: !usingTempWarband, // Don't fetch if using temp warband
+    enabled: isAuthenticated && !usingTempWarband && !usingPublicWarband,
   });
 
-  // Initialize the game
+  // Fetch public warband if specified
+  const urlParams = new URLSearchParams(window.location.search);
+  const publicWarbandId = urlParams.get('public');
+  const { data: publicWarband, isLoading: isLoadingPublicWarband } = useQuery<Warband>({
+    queryKey: ['/api/public/warbands', publicWarbandId],
+    enabled: !!publicWarbandId && usingPublicWarband,
+  });
+
+  // Fetch fighters for public warband
+  const { data: publicFighters, isLoading: isLoadingPublicFighters } = useQuery<Fighter[]>({
+    queryKey: ['/api/public/warbands', publicWarbandId, 'fighters'],
+    enabled: !!publicWarbandId && usingPublicWarband,
+  });
+
+  // Auto-start game with public warband when data is loaded
+  useEffect(() => {
+    if (usingPublicWarband && publicWarband && publicFighters) {
+      const activeWarbands: ActiveWarband[] = [{
+        warband: publicWarband,
+        fighters: publicFighters.map((fighter: Fighter) => ({
+          ...fighter,
+          currentWounds: fighter.wounds,
+          usedAbilities: [],
+          activationUsed: false,
+          hasTreasure: false,
+          statusEffects: [],
+          abilityDice: {},
+        })),
+        dicePool: {
+          single: [],
+          double: [],
+          triple: [],
+          quad: []
+        },
+        totalTreasures: 0
+      }];
+      
+      setActiveGame({
+        battleRound: 1,
+        warbandTurn: 0,
+        activeWarbands,
+      });
+      setGameStarted(true);
+    }
+  }, [usingPublicWarband, publicWarband, publicFighters]);
+
+  // Initialize the game with authenticated user's warbands
   const startGame = () => {
     if (selectedWarbandIds.length < 1) return;
 
@@ -363,14 +427,131 @@ export default function ActiveGame() {
     sessionStorage.removeItem('temp_fighters');
   };
 
+  // Fetch public warbands for guest users
+  const { data: publicWarbands, isLoading: isLoadingPublicWarbands } = useQuery<Warband[]>({
+    queryKey: ['/api/public/warbands'],
+    enabled: !isAuthenticated && !usingTempWarband && !usingPublicWarband,
+  });
+
   if (!gameStarted) {
+    // If not authenticated and no temp/public warband, show guest options
+    if (!isAuthenticated && !usingTempWarband && !usingPublicWarband) {
+      return (
+        <div className="container mx-auto my-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-cinzel font-bold mb-4">Welcome to Active Game Tracker</h1>
+            <p className="text-muted-foreground mb-6">
+              Experience the full battle tracking features! Choose how you'd like to play:
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Create Temporary Warband */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Create Temporary Warband
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Quickly create a temporary warband for this session. Perfect for testing or one-time games.
+                </p>
+                <Button 
+                  onClick={() => window.location.href = "/temp-warband"}
+                  className="w-full"
+                >
+                  Create Temp Warband
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Browse Public Warbands */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Use Public Warband
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Browse community-shared warbands and start playing immediately.
+                </p>
+                {isLoadingPublicWarbands ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ) : publicWarbands && publicWarbands.length > 0 ? (
+                  <div className="space-y-2">
+                    <Select 
+                      onValueChange={(value) => {
+                        const id = parseInt(value);
+                        window.location.href = `/active-game?public=${id}`;
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a public warband" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {publicWarbands.map((warband) => (
+                          <SelectItem key={warband.id} value={warband.id.toString()}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{warband.name}</span>
+                              <Badge variant="secondary" className="ml-2 text-xs">
+                                {warband.faction}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      onClick={() => window.location.href = "/public-warbands"}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Browse All Public Warbands
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-2">No public warbands available</p>
+                    <Button 
+                      onClick={() => window.location.href = "/public-warbands"}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Explore Community
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mt-8">
+            <p className="text-sm text-muted-foreground mb-4">
+              Want to save your progress and access all features?
+            </p>
+            <Button onClick={() => window.location.href = "/api/login"}>
+              Sign In to Continue
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Authenticated user warband selection
     return (
       <div className="container mx-auto my-8">
         <h1 className="text-3xl font-cinzel font-bold mb-6">Start New Game</h1>
         
         <Card>
           <CardHeader>
-            <CardTitle>Select Warbands</CardTitle>
+            <CardTitle>Select Your Warbands</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

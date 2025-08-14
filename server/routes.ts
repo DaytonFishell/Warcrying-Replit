@@ -132,6 +132,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/public/warbands/:id/fighters", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid warband ID" });
+      }
+
+      // First check if the warband exists and is public
+      const warband = await storage.getWarband(id);
+      if (!warband || !warband.isPublic) {
+        return res.status(404).json({ message: "Public warband not found" });
+      }
+
+      const fighters = await storage.getFightersByWarbandId(id);
+      res.json(fighters);
+    } catch (error) {
+      console.error("Error fetching public warband fighters:", error);
+      res.status(500).json({ message: "Failed to fetch fighters" });
+    }
+  });
+
   app.post("/api/public/warbands/:id/duplicate", async (req, res) => {
     try {
       const id = parseInt(req.params.id, 10);
