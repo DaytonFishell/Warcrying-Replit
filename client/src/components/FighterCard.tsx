@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import FighterForm from "@/components/forms/FighterForm";
 import { Fighter, Warband } from "@shared/schema";
+import { Copy } from "lucide-react";
 
 interface FighterCardProps {
   fighter: Fighter;
@@ -37,6 +38,26 @@ export default function FighterCard({ fighter }: FighterCardProps) {
       toast({
         title: "Error",
         description: `Failed to delete fighter: ${error}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const duplicateFighter = useMutation({
+    mutationFn: async (name: string) => {
+      return apiRequest('POST', `/api/fighters/${fighter.id}/duplicate`, { name });
+    },
+    onSuccess: (newFighter) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/fighters'] });
+      toast({
+        title: "Fighter Duplicated",
+        description: `${newFighter.name} has been created successfully.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to duplicate fighter: ${error}`,
         variant: "destructive",
       });
     }
@@ -142,6 +163,17 @@ export default function FighterCard({ fighter }: FighterCardProps) {
             </div>
             
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => duplicateFighter.mutate(`${fighter.name} (Copy)`)}
+                disabled={duplicateFighter.isPending}
+                className="bg-secondary/10 text-secondary-foreground hover:bg-secondary/20"
+              >
+                <Copy className="w-3 h-3 mr-1" />
+                {duplicateFighter.isPending ? "..." : "Copy"}
+              </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">

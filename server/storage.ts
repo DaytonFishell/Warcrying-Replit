@@ -38,6 +38,7 @@ export interface IStorage {
   createFighter(fighter: InsertFighter): Promise<Fighter>;
   updateFighter(id: number, fighter: Partial<InsertFighter>, userId?: string): Promise<Fighter | undefined>;
   deleteFighter(id: number, userId?: string): Promise<boolean>;
+  duplicateFighter(id: number, userId?: string, name?: string): Promise<Fighter | undefined>;
   
   // Battle operations
   getBattles(userId?: string): Promise<Battle[]>;
@@ -363,6 +364,43 @@ export class DatabaseStorage implements IStorage {
     }
     const result = await db.delete(fighters).where(eq(fighters.id, id)).returning();
     return result.length > 0;
+  }
+
+  async duplicateFighter(id: number, userId?: string, name?: string): Promise<Fighter | undefined> {
+    // Get the original fighter
+    const originalFighter = await this.getFighter(id, userId);
+    if (!originalFighter) return undefined;
+
+    // Verify user owns the warband
+    if (userId) {
+      const warband = await this.getWarband(originalFighter.warbandId, userId);
+      if (!warband) return undefined;
+    }
+
+    // Create new fighter data
+    const newFighterData: InsertFighter = {
+      warbandId: originalFighter.warbandId,
+      name: name || `${originalFighter.name} (Copy)`,
+      type: originalFighter.type,
+      pointsCost: originalFighter.pointsCost,
+      move: originalFighter.move,
+      toughness: originalFighter.toughness,
+      wounds: originalFighter.wounds,
+      strength: originalFighter.strength,
+      attacks: originalFighter.attacks,
+      damage: originalFighter.damage,
+      criticalDamage: originalFighter.criticalDamage,
+      range: originalFighter.range,
+      abilities: originalFighter.abilities,
+      imageUrl: originalFighter.imageUrl,
+      battles: 0, // Reset battle stats for new fighter
+      kills: 0,
+      deaths: 0
+    };
+
+    // Create the new fighter
+    const [newFighter] = await db.insert(fighters).values(newFighterData).returning();
+    return newFighter;
   }
   
   // Battle operations

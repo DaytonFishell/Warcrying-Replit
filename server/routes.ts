@@ -336,6 +336,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.status(204).end();
   });
+
+  app.post("/api/fighters/:id/duplicate", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid fighter ID" });
+      }
+
+      const duplicatedFighter = await storage.duplicateFighter(id, userId, name);
+      if (!duplicatedFighter) {
+        return res.status(404).json({ message: "Fighter not found" });
+      }
+
+      res.status(201).json(duplicatedFighter);
+    } catch (error) {
+      console.error("Error duplicating fighter:", error);
+      res.status(500).json({ message: "Failed to duplicate fighter" });
+    }
+  });
   
   // Battle routes (protected)
   app.get("/api/battles", isAuthenticated, async (req: any, res) => {
