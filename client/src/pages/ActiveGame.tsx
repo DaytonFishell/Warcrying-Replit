@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import LazyWarbandSetup from "@/components/LazyWarbandSetup";
 
 // Enhanced fighter tracking with treasure and status effects
 type ActiveFighter = Fighter & {
@@ -82,6 +83,7 @@ export default function ActiveGame() {
   const [usingTempWarband, setUsingTempWarband] = useState(false);
   const [usingPublicWarband, setUsingPublicWarband] = useState(false);
   const [isGuestMode, setIsGuestMode] = useState(false);
+  const [showLazySetup, setShowLazySetup] = useState(false);
 
   // Check if using a temporary or public warband (from URL parameters)
   useEffect(() => {
@@ -430,8 +432,55 @@ export default function ActiveGame() {
   // Fetch public warbands for guest users
   const { data: publicWarbands, isLoading: isLoadingPublicWarbands } = useQuery<Warband[]>({
     queryKey: ['/api/public/warbands'],
-    enabled: !isAuthenticated && !usingTempWarband && !usingPublicWarband,
+    enabled: !isAuthenticated && !usingTempWarband && !usingPublicWarband && !showLazySetup,
   });
+
+  // Handle lazy setup completion
+  const handleLazySetupComplete = (warbandData: any) => {
+    setUsingTempWarband(true);
+    setIsGuestMode(true);
+    setShowLazySetup(false);
+    
+    // Start game with lazy warband
+    const activeWarbands: ActiveWarband[] = [{
+      warband: warbandData.warband,
+      fighters: warbandData.fighters.map((fighter: Fighter) => ({
+        ...fighter,
+        currentWounds: fighter.wounds,
+        usedAbilities: [],
+        activationUsed: false,
+        hasTreasure: false,
+        statusEffects: [],
+        abilityDice: {},
+      })),
+      dicePool: {
+        single: [],
+        double: [],
+        triple: [],
+        quad: []
+      },
+      totalTreasures: 0
+    }];
+    
+    setActiveGame({
+      battleRound: 1,
+      warbandTurn: 0,
+      activeWarbands,
+    });
+    setGameStarted(true);
+  };
+
+  // Show lazy setup if requested
+  if (showLazySetup) {
+    return (
+      <div className="container mx-auto my-8">
+        <LazyWarbandSetup 
+          onComplete={handleLazySetupComplete}
+          onCancel={() => setShowLazySetup(false)}
+        />
+      </div>
+    );
+  }
 
   if (!gameStarted) {
     // If not authenticated and no temp/public warband, show guest options
@@ -445,24 +494,46 @@ export default function ActiveGame() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Quick Setup */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Quick Setup
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Fastest way to start! Just enter fighter names and wounds - perfect for casual games.
+                </p>
+                <Button 
+                  onClick={() => setShowLazySetup(true)}
+                  className="w-full"
+                >
+                  Quick Setup
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Create Temporary Warband */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Create Temporary Warband
+                  Full Temporary Warband
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Quickly create a temporary warband for this session. Perfect for testing or one-time games.
+                  Create a detailed temporary warband with full stats and abilities for this session.
                 </p>
                 <Button 
                   onClick={() => window.location.href = "/temp-warband"}
                   className="w-full"
+                  variant="outline"
                 >
-                  Create Temp Warband
+                  Create Detailed Warband
                 </Button>
               </CardContent>
             </Card>
