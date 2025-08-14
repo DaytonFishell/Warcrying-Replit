@@ -3,10 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Globe, Heart, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import WarbandForm from "@/components/forms/WarbandForm";
+import WarbandSharingControls from "@/components/WarbandSharingControls";
 import { Warband, Fighter } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
@@ -67,12 +70,34 @@ export default function WarbandCard({ warband }: WarbandCardProps) {
       <div className="card overflow-hidden">
         <div className="card-header p-4">
           <div className="flex justify-between items-start">
-            <h3 className="font-cinzel font-bold text-lg">{warband.name}</h3>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-cinzel font-bold text-lg">{warband.name}</h3>
+                {warband.isPublic && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Globe className="h-3 w-3 mr-1" />
+                    Public
+                  </Badge>
+                )}
+              </div>
+              <p className="text-foreground/80 text-sm mt-1">Last updated: {formattedDate}</p>
+            </div>
             <span className="bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full">
               {warband.faction} • {warband.currentPoints}/{warband.pointsLimit} pts
             </span>
           </div>
-          <p className="text-foreground/80 text-sm mt-1">Last updated: {formattedDate}</p>
+          {warband.isPublic && (
+            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+              <div className="flex items-center gap-1">
+                <Heart className="h-3 w-3" />
+                <span>{warband.likes || 0} likes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                <span>{warband.views || 0} views</span>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="p-4">
@@ -175,11 +200,14 @@ export default function WarbandCard({ warband }: WarbandCardProps) {
       
       {/* Inline Edit Form */}
       {isEditing && (
-        <div className="mt-4 border rounded-lg p-4 bg-muted/50">
-          <WarbandForm 
-            warband={warband} 
-            onSuccess={() => setIsEditing(false)} 
-          />
+        <div className="mt-4 space-y-4">
+          <div className="border rounded-lg p-4 bg-muted/50">
+            <WarbandForm 
+              warband={warband} 
+              onSuccess={() => setIsEditing(false)} 
+            />
+          </div>
+          <WarbandSharingControls warband={warband} />
         </div>
       )}
     </>

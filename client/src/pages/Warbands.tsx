@@ -4,10 +4,10 @@ import { Link } from "wouter";
 import WarbandCard from "@/components/WarbandCard";
 import WarbandForm from "@/components/forms/WarbandForm";
 import { Button } from "@/components/ui/button";
-
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Globe, Filter } from "lucide-react";
 import { Warband } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Warbands() {
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPublicOnly, setShowPublicOnly] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   
@@ -37,10 +38,12 @@ export default function Warbands() {
     queryKey: ['/api/warbands'],
   });
   
-  const filteredWarbands = warbands?.filter(warband => 
-    warband.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    warband.faction.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredWarbands = warbands?.filter(warband => {
+    const matchesSearch = warband.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      warband.faction.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPublicFilter = !showPublicOnly || warband.isPublic;
+    return matchesSearch && matchesPublicFilter;
+  });
   
   return (
     <div>
@@ -50,14 +53,31 @@ export default function Warbands() {
       </div>
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search warbands..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search warbands..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          <Button
+            variant={showPublicOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowPublicOnly(!showPublicOnly)}
+            className="flex items-center gap-2"
+          >
+            <Globe className="h-4 w-4" />
+            Public Only
+            {showPublicOnly && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {filteredWarbands?.filter(w => w.isPublic).length || 0}
+              </Badge>
+            )}
+          </Button>
         </div>
         
         <Button 
