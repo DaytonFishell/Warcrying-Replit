@@ -30,14 +30,48 @@ A comprehensive tabletop companion app for Warcry games that focuses on real-tim
 - Create quick teams without persistent storage
 - Session-based storage for rapid game setup
 - Seamless integration with main battle tracker
+- Public warband duplication for guest users creates temporary warbands
+
+### Community Features
+- **Public Warband Gallery**: Browse and discover community-shared warbands
+- **Warband Sharing Controls**: Toggle warband visibility and track engagement
+- **Like System**: Authenticated users can like/unlike public warbands
+- **Guest User Support**: Non-authenticated users can browse and copy public content
+- **Search and Filtering**: Advanced discovery tools for public warband gallery
 
 ### Database Schema
-- **Warbands Table**: Core warband information
+- **Warbands Table**: Core warband information with public sharing support
 - **Fighters Table**: Fighter stats with foreign key relationship to warbands
 - **Battles Table**: Battle tracking and outcomes
+- **WarbandLikes Table**: User engagement and likes tracking for public warbands
 - Proper foreign key relationships and data integrity
 
 ## Recent Changes
+
+### August 14, 2025 - Public Warband Sharing System Completed
+- ✅ **Public Warband Sharing**: Full implementation of public warband sharing system
+  - Added warband sharing controls to toggle public visibility
+  - Created public warband gallery with search, filtering, and sorting
+  - Implemented warband duplication for guests and authenticated users
+  - Added like system for public warbands with authentication checks
+  - Enhanced warband detail views with comprehensive fighter information
+- ✅ **Guest User Access**: Non-authenticated users can browse and copy public warbands
+  - Seamless guest experience with temporary warband creation
+  - Clear authentication prompts for premium features (saving permanently, liking)
+  - Consistent UI/UX across authenticated and guest user flows
+- ✅ **Database Enhancement**: Extended schema with public sharing support
+  - Added warbandLikes table for user engagement tracking
+  - Updated warbands table with isPublic, views, likes fields
+  - Proper foreign key relationships and data integrity
+- ✅ **Navigation Updates**: Added public gallery access throughout the application
+  - Landing page showcases community features with direct gallery access
+  - Navigation tabs include gallery for both authenticated and guest users
+  - Strategic placement of sharing features in warband management interface
+- ✅ **API Layer**: Comprehensive REST API for public warband operations
+  - Public warband listing with advanced filtering and search capabilities
+  - Secure like/unlike endpoints with authentication validation
+  - Warband duplication with smart naming for guest vs authenticated users
+  - View tracking and engagement metrics collection
 
 ### August 13, 2025 - Performance Optimization & Legal Compliance
 - ✅ **Legal Pages**: Added comprehensive Privacy Policy and Terms of Service pages

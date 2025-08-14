@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Sword, Users, Trophy, ArrowRight } from "lucide-react";
+import { Shield, Sword, Users, Trophy, ArrowRight, Image } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Landing() {
   return (
@@ -15,13 +16,25 @@ export default function Landing() {
             Your ultimate tabletop companion for Warcry games. Track battles, manage warbands, 
             and enhance your gameplay experience with real-time battle management.
           </p>
-          <Button 
-            size="lg" 
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg"
-            onClick={() => window.location.href = '/api/login'}
-          >
-            Get Started <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              size="lg" 
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg"
+              onClick={() => window.location.href = '/api/login'}
+            >
+              Get Started <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Link href="/public/warbands">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white px-8 py-3 text-lg"
+              >
+                <Image className="mr-2 h-5 w-5" />
+                Browse Public Warbands
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Features Grid */}
@@ -64,15 +77,38 @@ export default function Landing() {
 
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <Shield className="h-12 w-12 text-purple-400 mb-4" />
-              <CardTitle className="text-white">Secure Data</CardTitle>
+              <Image className="h-12 w-12 text-purple-400 mb-4" />
+              <CardTitle className="text-white">Community Sharing</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription className="text-slate-300">
-                Your warbands and battle data are securely stored and accessible only to you.
+                Discover and copy warbands shared by other players, or share your own creations.
               </CardDescription>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Community Showcase */}
+        <div className="mb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">Community Warbands</h2>
+            <p className="text-slate-300 text-lg max-w-2xl mx-auto">
+              Browse warbands shared by the community. As a guest, you can copy any warband as a template 
+              for this session. Sign in to save permanently and like your favorites.
+            </p>
+          </div>
+          <div className="text-center">
+            <Link href="/public/warbands">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white px-8 py-3 text-lg"
+              >
+                <Image className="mr-2 h-5 w-5" />
+                Explore Public Gallery
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Call to Action */}

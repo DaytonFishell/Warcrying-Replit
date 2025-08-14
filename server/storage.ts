@@ -3,10 +3,11 @@ import {
   fighters, type Fighter, type InsertFighter,
   battles, type Battle, type InsertBattle,
   battleFighterStats, type BattleFighterStat, type InsertBattleFighterStat,
+  warbandLikes, type WarbandLike, type InsertWarbandLike,
   users, type User, type UpsertUser
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -16,10 +17,19 @@ export interface IStorage {
   
   // Warband operations
   getWarbands(userId?: string): Promise<Warband[]>;
+  getPublicWarbands(limit?: number): Promise<Warband[]>;
   getWarband(id: number, userId?: string): Promise<Warband | undefined>;
   createWarband(warband: InsertWarband): Promise<Warband>;
   updateWarband(id: number, warband: Partial<InsertWarband>, userId?: string): Promise<Warband | undefined>;
   deleteWarband(id: number, userId?: string): Promise<boolean>;
+  duplicateWarband(id: number, userId?: string, name?: string): Promise<Warband | undefined>;
+  incrementWarbandViews(id: number): Promise<void>;
+  
+  // Warband likes operations
+  likeWarband(userId: string, warbandId: number): Promise<WarbandLike>;
+  unlikeWarband(userId: string, warbandId: number): Promise<boolean>;
+  isWarbandLiked(userId: string, warbandId: number): Promise<boolean>;
+  getWarbandLikes(warbandId: number): Promise<number>;
   
   // Fighter operations
   getFighters(userId?: string): Promise<Fighter[]>;
@@ -72,6 +82,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(warbands);
   }
   
+  async getPublicWarbands(limit: number = 20): Promise<Warband[]> {
+    return await db
+      .select()
+      .from(warbands)
+      .where(eq(warbands.isPublic, true))
+      .orderBy(desc(warbands.likes), desc(warbands.createdAt))
+      .limit(limit);
+  }
+  
   async getWarband(id: number, userId?: string): Promise<Warband | undefined> {
     if (userId) {
       const results = await db.select().from(warbands).where(and(eq(warbands.id, id), eq(warbands.userId, userId)));
@@ -109,6 +128,114 @@ export class DatabaseStorage implements IStorage {
     }
     const result = await db.delete(warbands).where(eq(warbands.id, id)).returning();
     return result.length > 0;
+  }
+
+  async duplicateWarband(id: number, userId?: string, name?: string): Promise<Warband | undefined> {
+    // Get the original warband
+    const [originalWarband] = await db.select().from(warbands).where(eq(warbands.id, id));
+    if (!originalWarband) return undefined;
+
+    // Get all fighters for this warband
+    const originalFighters = await db.select().from(fighters).where(eq(fighters.warbandId, id));
+
+    // Create new warband
+    const newWarbandData: InsertWarband = {
+      userId: userId || null,
+      name: name || `${originalWarband.name} (Copy)`,
+      faction: originalWarband.faction,
+      pointsLimit: originalWarband.pointsLimit,
+      currentPoints: originalWarband.currentPoints,
+      description: originalWarband.description,
+      isTemplate: !userId, // Templates for guest users
+      templateSourceId: originalWarband.id,
+    };
+
+    const [newWarband] = await db.insert(warbands).values(newWarbandData).returning();
+
+    // Copy all fighters
+    if (originalFighters.length > 0) {
+      const newFighters = originalFighters.map(fighter => ({
+        warbandId: newWarband.id,
+        name: fighter.name,
+        type: fighter.type,
+        pointsCost: fighter.pointsCost,
+        move: fighter.move,
+        toughness: fighter.toughness,
+        wounds: fighter.wounds,
+        strength: fighter.strength,
+        attacks: fighter.attacks,
+        damage: fighter.damage,
+        criticalDamage: fighter.criticalDamage,
+        range: fighter.range,
+        abilities: fighter.abilities,
+        imageUrl: fighter.imageUrl,
+        battles: 0, // Reset battle stats
+        kills: 0,
+        deaths: 0,
+      }));
+
+      await db.insert(fighters).values(newFighters);
+    }
+
+    return newWarband;
+  }
+
+  async incrementWarbandViews(id: number): Promise<void> {
+    await db
+      .update(warbands)
+      .set({ views: sql`${warbands.views} + 1` })
+      .where(eq(warbands.id, id));
+  }
+
+  // Warband likes operations
+  async likeWarband(userId: string, warbandId: number): Promise<WarbandLike> {
+    // First create the like
+    const [like] = await db
+      .insert(warbandLikes)
+      .values({ userId, warbandId })
+      .onConflictDoNothing()
+      .returning();
+
+    // Update the warband likes count
+    await db
+      .update(warbands)
+      .set({ likes: sql`${warbands.likes} + 1` })
+      .where(eq(warbands.id, warbandId));
+
+    return like;
+  }
+
+  async unlikeWarband(userId: string, warbandId: number): Promise<boolean> {
+    const result = await db
+      .delete(warbandLikes)
+      .where(and(eq(warbandLikes.userId, userId), eq(warbandLikes.warbandId, warbandId)))
+      .returning();
+
+    if (result.length > 0) {
+      // Update the warband likes count
+      await db
+        .update(warbands)
+        .set({ likes: sql`${warbands.likes} - 1` })
+        .where(eq(warbands.id, warbandId));
+      return true;
+    }
+    return false;
+  }
+
+  async isWarbandLiked(userId: string, warbandId: number): Promise<boolean> {
+    const [like] = await db
+      .select()
+      .from(warbandLikes)
+      .where(and(eq(warbandLikes.userId, userId), eq(warbandLikes.warbandId, warbandId)));
+    return !!like;
+  }
+
+  async getWarbandLikes(warbandId: number): Promise<number> {
+    const [warband] = await db
+      .select({ likes: warbands.likes })
+      .from(warbands)
+      .where(eq(warbands.id, warbandId));
+    return warband?.likes || 0;
   }
   
   // Fighter operations

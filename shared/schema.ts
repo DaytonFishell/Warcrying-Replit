@@ -31,13 +31,19 @@ export const users = pgTable("users", {
 // Warbands table
 export const warbands = pgTable("warbands", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   faction: text("faction").notNull(),
   pointsLimit: integer("points_limit").notNull().default(1000),
   currentPoints: integer("current_points").notNull().default(0),
   description: text("description"),
+  isPublic: boolean("is_public").notNull().default(false),
+  isTemplate: boolean("is_template").notNull().default(false),
+  templateSourceId: integer("template_source_id").references(() => warbands.id),
+  likes: integer("likes").notNull().default(0),
+  views: integer("views").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Fighters table
@@ -86,8 +92,27 @@ export const battleFighterStats = pgTable("battle_fighter_stats", {
   notes: text("notes"),
 });
 
+// Warband likes table
+export const warbandLikes = pgTable("warband_likes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  warbandId: integer("warband_id").notNull().references(() => warbands.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  // Unique constraint to prevent duplicate likes
+  index("unique_user_warband_like").on(table.userId, table.warbandId),
+]);
+
 // Create insertion schemas
 export const insertWarbandSchema = createInsertSchema(warbands).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  likes: true,
+  views: true,
+});
+
+export const insertWarbandLikeSchema = createInsertSchema(warbandLikes).omit({
   id: true,
   createdAt: true,
 });
@@ -121,6 +146,11 @@ export const warbandsRelations = relations(warbands, ({ one, many }) => ({
     references: [users.id],
   }),
   fighters: many(fighters),
+  likes: many(warbandLikes),
+  templateSource: one(warbands, {
+    fields: [warbands.templateSourceId],
+    references: [warbands.id],
+  }),
   battleWins: many(battles, { relationName: "winnerWarband" }),
   battleLosses: many(battles, { relationName: "loserWarband" }),
 }));
@@ -158,6 +188,17 @@ export const battleFighterStatsRelations = relations(battleFighterStats, ({ one 
   }),
 }));
 
+export const warbandLikesRelations = relations(warbandLikes, ({ one }) => ({
+  user: one(users, {
+    fields: [warbandLikes.userId],
+    references: [users.id],
+  }),
+  warband: one(warbands, {
+    fields: [warbandLikes.warbandId],
+    references: [warbands.id],
+  }),
+}));
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -173,3 +214,6 @@ export type InsertBattle = z.infer<typeof insertBattleSchema>;
 
 export type BattleFighterStat = typeof battleFighterStats.$inferSelect;
 export type InsertBattleFighterStat = z.infer<typeof insertBattleFighterStatsSchema>;
+
+export type WarbandLike = typeof warbandLikes.$inferSelect;
+export type InsertWarbandLike = z.infer<typeof insertWarbandLikeSchema>;

@@ -16,6 +16,8 @@ import ActiveGame from "@/pages/ActiveGame";
 import TempWarband from "@/pages/TempWarband";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
+import PublicWarbands from "@/pages/PublicWarbands";
+import PublicWarbandDetail from "@/pages/PublicWarbandDetail";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import NavigationTabs from "@/components/NavigationTabs";
@@ -30,6 +32,8 @@ function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
         <Route path="/" component={Landing} />
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/terms" component={TermsOfService} />
+        <Route path="/public/warbands" component={PublicWarbands} />
+        <Route path="/public/warbands/:id" component={PublicWarbandDetail} />
         <Route component={Landing} />
       </Switch>
     );
@@ -47,6 +51,8 @@ function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
       <Route path="/temp-warband" component={TempWarband} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
+      <Route path="/public/warbands" component={PublicWarbands} />
+      <Route path="/public/warbands/:id" component={PublicWarbandDetail} />
       <Route component={NotFound} />
     </Switch>
   );

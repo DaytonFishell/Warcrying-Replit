@@ -6,7 +6,8 @@ import {
   insertWarbandSchema, 
   insertFighterSchema, 
   insertBattleSchema, 
-  insertBattleFighterStatsSchema
+  insertBattleFighterStatsSchema,
+  insertWarbandLikeSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -94,6 +95,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.status(204).end();
+  });
+
+  // Public warband routes (no auth required)
+  app.get("/api/public/warbands", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const warbands = await storage.getPublicWarbands(limit);
+      res.json(warbands);
+    } catch (error) {
+      console.error("Error fetching public warbands:", error);
+      res.status(500).json({ message: "Failed to fetch public warbands" });
+    }
+  });
+
+  app.get("/api/public/warbands/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid warband ID" });
+      }
+
+      const warband = await storage.getWarband(id);
+      if (!warband || !warband.isPublic) {
+        return res.status(404).json({ message: "Public warband not found" });
+      }
+
+      // Increment view count
+      await storage.incrementWarbandViews(id);
+      
+      res.json(warband);
+    } catch (error) {
+      console.error("Error fetching public warband:", error);
+      res.status(500).json({ message: "Failed to fetch public warband" });
+    }
+  });
+
+  app.post("/api/public/warbands/:id/duplicate", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { name } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid warband ID" });
+      }
+
+      // Check if user is authenticated for permanent save
+      let userId = null;
+      if (req.user && (req.user as any).claims) {
+        userId = (req.user as any).claims.sub;
+      }
+
+      const duplicatedWarband = await storage.duplicateWarband(id, userId, name);
+      if (!duplicatedWarband) {
+        return res.status(404).json({ message: "Warband not found" });
+      }
+
+      res.status(201).json(duplicatedWarband);
+    } catch (error) {
+      console.error("Error duplicating warband:", error);
+      res.status(500).json({ message: "Failed to duplicate warband" });
+    }
+  });
+
+  // Warband likes routes (protected)
+  app.post("/api/warbands/:id/like", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const userId = req.user.claims.sub;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid warband ID" });
+      }
+
+      const like = await storage.likeWarband(userId, id);
+      res.status(201).json(like);
+    } catch (error) {
+      console.error("Error liking warband:", error);
+      res.status(500).json({ message: "Failed to like warband" });
+    }
+  });
+
+  app.delete("/api/warbands/:id/like", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const userId = req.user.claims.sub;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid warband ID" });
+      }
+
+      const success = await storage.unlikeWarband(userId, id);
+      if (!success) {
+        return res.status(404).json({ message: "Like not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error unliking warband:", error);
+      res.status(500).json({ message: "Failed to unlike warband" });
+    }
+  });
+
+  app.get("/api/warbands/:id/liked", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const userId = req.user.claims.sub;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid warband ID" });
+      }
+
+      const isLiked = await storage.isWarbandLiked(userId, id);
+      res.json({ isLiked });
+    } catch (error) {
+      console.error("Error checking warband like status:", error);
+      res.status(500).json({ message: "Failed to check like status" });
+    }
   });
   
   // Fighter routes (protected)
