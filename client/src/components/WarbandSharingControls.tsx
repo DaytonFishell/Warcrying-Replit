@@ -20,9 +20,11 @@ export default function WarbandSharingControls({ warband }: WarbandSharingContro
 
   const updateSharingMutation = useMutation({
     mutationFn: async (isPublicValue: boolean) => {
-      return await apiRequest(`/api/warbands/${warband.id}`, "PATCH", { isPublic: isPublicValue });
+      console.log("Updating sharing for warband:", warband.id, "to public:", isPublicValue);
+      return await apiRequest("PATCH", `/api/warbands/${warband.id}`, { isPublic: isPublicValue });
     },
     onSuccess: () => {
+      console.log("Successfully updated sharing settings");
       queryClient.invalidateQueries({ queryKey: ["/api/warbands"] });
       queryClient.invalidateQueries({ queryKey: [`/api/warbands/${warband.id}`] });
       toast({
@@ -33,10 +35,11 @@ export default function WarbandSharingControls({ warband }: WarbandSharingContro
       });
     },
     onError: (error) => {
+      console.error("Failed to update sharing settings:", error);
       setIsPublic(!isPublic); // Revert the switch
       toast({
         title: "Error",
-        description: "Failed to update sharing settings. Please try again.",
+        description: `Failed to update sharing settings: ${error.message || error}`,
         variant: "destructive",
       });
     },

@@ -63,21 +63,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const id = parseInt(req.params.id, 10);
     const userId = req.user.claims.sub;
     
+    console.log(`PATCH /api/warbands/${id} - User: ${userId}, Body:`, req.body);
+    
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid warband ID" });
     }
     
     try {
       const validatedData = insertWarbandSchema.partial().omit({ userId: true }).parse(req.body);
+      console.log("Validated data:", validatedData);
+      
       const warband = await storage.updateWarband(id, validatedData, userId);
       
       if (!warband) {
+        console.log("Warband not found for update");
         return res.status(404).json({ message: "Warband not found" });
       }
       
+      console.log("Updated warband:", warband);
       res.json(warband);
     } catch (error) {
-      res.status(400).json({ message: "Invalid warband data", error });
+      console.error("Error updating warband:", error);
+      res.status(400).json({ message: "Invalid warband data", error: error.message });
     }
   });
   
